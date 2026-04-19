@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "A digital project created by the user",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the project"
+        },
+        "description": {
+          "type": "string",
+          "description": "A short description of the project"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the project image"
+        },
+        "link": {
+          "type": "string",
+          "description": "URL to the project or purchase link"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["free", "paid"],
+          "description": "Whether the project is free or paid"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When the project was created"
+        },
+        "authorUid": {
+          "type": "string",
+          "description": "The UID of the user who created the project"
+        }
+      },
+      "required": ["title", "description", "imageUrl", "link", "type", "createdAt", "authorUid"]
+    }
+  },
+  "firestore": {
+    "/projects/{projectId}": {
+      "schema": {
+        "$ref": "#/entities/Project"
+      },
+      "description": "Collection of digital projects"
+    }
+  }
+}
