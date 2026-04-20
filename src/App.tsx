@@ -21,95 +21,10 @@ import {
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
+import { supabase } from './lib/supabase';
 
-// Custom TikTok Icon since Lucide doesn't have it in the standard set sometimes or it's named differently
-const TikTokIcon = ({ size = 24 }: { size?: number }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
-  >
-    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-  </svg>
-);
-
-const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const navLinks = [
-    { name: "Beranda", href: "#home" },
-    { name: "Tentang", href: "#about" },
-    { name: "Kualifikasi", href: "#qualifications" },
-    { name: "Keahlian", href: "#skillset" },
-    { name: "Proyek", href: "#projects" },
-    { name: "Kontak", href: "#contact" },
-  ];
-
-  return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? "glass-nav shadow-sm py-4" : "bg-transparent py-6"}`}>
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-        <a href="#" className="text-xl font-bold tracking-tighter text-on-surface">
-          Muhammad Alimka
-        </a>
-        
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-8 font-headline font-semibold text-sm">
-          {navLinks.map((link) => (
-            <a 
-              key={link.name}
-              href={link.href} 
-              className="text-on-surface-variant hover:text-primary transition-colors"
-            >
-              {link.name}
-            </a>
-          ))}
-        </div>
-
-        {/* Mobile Menu Toggle */}
-        <button 
-          className="md:hidden text-on-surface"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="md:hidden absolute top-full left-0 w-full bg-surface-container-lowest shadow-lg border-t border-outline-variant/10 py-6 px-6 flex flex-col gap-4"
-        >
-          {navLinks.map((link) => (
-            <a 
-              key={link.name}
-              href={link.href} 
-              className="text-on-surface-variant font-semibold"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {link.name}
-            </a>
-          ))}
-        </motion.div>
-      )}
-    </nav>
-  );
-};
+import { Navbar } from "./components/Navbar";
+import { Footer, TikTokIcon } from "./components/Footer";
 
 const Hero = () => {
   return (
@@ -132,10 +47,10 @@ const Hero = () => {
             Saya adalah Guru Mata Pelajaran Informatika di UPTD SMPN 6 Moncongloe, Maros. Saya memiliki tugas tambahan dan rekam jejak fokus di Bidang Pendidikan dan Teknologi. Mari berkenalan lebih lanjut dengan saya.
           </p>
           <div className="flex flex-wrap gap-4">
-            <a href="https://lynk.id/alimkadigital" target="_blank" rel="noopener noreferrer" className="btn-primary text-white px-8 py-4 rounded-xl font-bold tracking-wide uppercase text-sm inline-flex items-center gap-2">
-              Beli Produk Digital
+            <a href="#projects" className="btn-primary text-white px-8 py-4 rounded-xl font-bold tracking-wide uppercase text-sm inline-flex items-center gap-2">
+              Cek Projek
             </a>
-            <a href="#contact" className="px-8 py-4 border border-outline-variant rounded-xl font-bold tracking-wide uppercase text-sm text-primary hover:bg-surface-container-low transition-colors">
+            <a href="https://wa.me/6282335454864" target="_blank" rel="noopener noreferrer" className="px-8 py-4 border border-outline-variant rounded-xl font-bold tracking-wide uppercase text-sm text-primary hover:bg-surface-container-low transition-colors">
               Hubungi Saya
             </a>
           </div>
@@ -588,23 +503,130 @@ const Awards = () => {
   );
 };
 
+import { Link } from "react-router-dom";
+
+const ProjectCard = ({ project, index }: { project: any, index: number, key?: string | number }) => {
+  const isPaid = project.type === 'paid';
+  return (
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.4, delay: index * 0.1 }}
+      className={`rounded-3xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl ${
+        isPaid 
+          ? 'bg-surface-container-lowest border-2 border-primary/30 before:absolute before:inset-0 before:bg-gradient-to-br before:from-primary/5 before:to-transparent before:z-0' 
+          : 'bg-surface-container-lowest border border-outline-variant/10'
+      }`}
+    >
+      <div className="aspect-video overflow-hidden relative z-10">
+        <img 
+          src={project.imageUrl} 
+          alt={project.title} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
+          }}
+        />
+        <div className="absolute top-4 right-4">
+          <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.1)] flex items-center gap-1.5 ${
+            isPaid ? 'bg-gradient-to-r from-primary to-primary-fixed text-on-primary' : 'bg-surface text-on-surface'
+          }`}>
+            {isPaid ? '⭐ Eksklusif' : '🎁 Gratis'}
+          </span>
+        </div>
+      </div>
+      <div className="p-8 flex flex-col flex-grow relative z-10 bg-surface-container-lowest/80 backdrop-blur-sm">
+        {/* Decorative line */}
+        <div className={`absolute top-0 left-8 w-12 h-1 rounded-b-full ${isPaid ? 'bg-primary' : 'bg-secondary'}`}></div>
+        
+        <h4 className={`text-xl font-bold mb-3 line-clamp-2 mt-2 transition-colors ${
+          isPaid ? 'text-primary' : 'text-on-surface group-hover:text-primary'
+        }`}>{project.title}</h4>
+        <p className="text-on-surface-variant text-sm mb-8 flex-grow leading-relaxed">{project.description}</p>
+        
+        <Link 
+          to={`/projects/${project.id}`}
+          className={`inline-flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest transition-all py-3 px-6 rounded-xl w-full ${
+            isPaid 
+              ? 'bg-primary/10 text-primary hover:bg-primary hover:text-on-primary' 
+              : 'bg-secondary/10 text-secondary hover:bg-secondary hover:text-on-secondary'
+          }`}
+        >
+          Lihat Detail <ArrowRight size={16} />
+        </Link>
+      </div>
+    </motion.div>
+  );
+};
+
 const Projects = () => {
   const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const projectsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setProjects(projectsData);
-    }, (error) => {
-      console.error("Error fetching projects: ", error);
-    });
+    const fetchProjects = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error("Error fetching projects from Supabase: ", error);
+        // Fallback to Firebase if Supabase fails (optional, but good for migration)
+        const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          const projectsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setProjects(projectsData);
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      } else {
+        // Map snake_case to camelCase for UI compatibility
+        const mappedData = data.map(p => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            imageUrl: p.image_url,
+            link: p.link,
+            type: p.type,
+            createdAt: p.created_at,
+            authorUid: p.author_uid
+        }));
+        setProjects(mappedData);
+        setLoading(false);
+      }
+    };
 
-    return () => unsubscribe();
+    fetchProjects();
+
+    // Real-time subscription
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects',
+        },
+        () => fetchProjects()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const paidProjects = projects.filter(p => p.type === 'paid');
+  const freeProjects = projects.filter(p => p.type === 'free');
 
   return (
     <section id="projects" className="py-24 bg-surface">
@@ -614,54 +636,99 @@ const Projects = () => {
             <h2 className="text-4xl font-bold tracking-tighter text-on-surface mb-2">Showcase Proyek Terbaru</h2>
             <div className="h-1 w-20 bg-secondary"></div>
           </div>
-          <p className="text-on-surface-variant max-w-md">Kumpulan proyek digital, baik yang gratis maupun berbayar, yang berfokus pada inovasi pendidikan.</p>
+          <p className="text-on-surface-variant max-w-md">Kumpulan proyek digital pilihan yang berfokus pada inovasi pendidikan dan pemberdayaan guru.</p>
         </div>
         
         {projects.length === 0 ? (
-          <div className="text-center py-12 bg-surface-container-lowest rounded-3xl border border-outline-variant/10">
-            <p className="text-on-surface-variant">Belum ada proyek yang ditambahkan.</p>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20 bg-surface-container-lowest rounded-[2rem] border border-outline-variant/10 border-dashed"
+          >
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-surface-container mb-4 text-on-surface-variant/50">
+              <span className="text-3xl font-black">?</span>
+            </div>
+            <p className="text-on-surface-variant font-medium text-lg">Belum ada proyek yang ditambahkan.</p>
+          </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {projects.map((project, index) => (
-              <motion.div 
-                key={project.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-surface-container-lowest rounded-3xl overflow-hidden card-hover group border border-outline-variant/10 flex flex-col"
-              >
-                <div className="aspect-video overflow-hidden relative">
-                  <img 
-                    src={project.imageUrl} 
-                    alt={project.title} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
-                    }}
-                  />
-                  <div className="absolute top-4 right-4">
-                    <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-md ${project.type === 'paid' ? 'bg-primary text-on-primary' : 'bg-secondary text-on-secondary'}`}>
-                      {project.type === 'paid' ? 'Berbayar' : 'Gratis'}
-                    </span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8">
+            {/* Paid Projects Section */}
+            {(paidProjects.length > 0 || projects.length > 0) && (
+              <div className="bg-surface-container-lowest/40 rounded-3xl p-6 md:p-8 border border-outline-variant/10">
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  className="flex flex-col mb-8"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner mb-4">
+                    <span className="text-2xl">⭐</span>
                   </div>
-                </div>
-                <div className="p-8 flex flex-col flex-grow">
-                  <h4 className="text-xl font-bold text-on-surface mb-3 line-clamp-2">{project.title}</h4>
-                  <p className="text-on-surface-variant text-sm mb-6 flex-grow">{project.description}</p>
-                  <a 
-                    href={project.link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider hover:gap-3 transition-all mt-auto"
-                  >
-                    Lihat Proyek <ArrowRight size={16} />
-                  </a>
-                </div>
-              </motion.div>
-            ))}
+                  <div>
+                    <h3 className="text-2xl font-black text-on-surface mb-1">Koleksi Eksklusif</h3>
+                    <p className="text-sm text-on-surface-variant font-medium">Proyek berbayar premium untuk memaksimalkan potensi edukasi</p>
+                  </div>
+                </motion.div>
+                
+                {paidProjects.length === 0 ? (
+                  <div className="py-12 text-center border-2 border-dashed border-outline-variant/20 rounded-2xl">
+                    <p className="text-on-surface-variant text-sm">Belum ada proyek eksklusif</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-6">
+                    {paidProjects.slice(0, 3).map((project, index) => (
+                      <ProjectCard key={project.id} project={project} index={index} />
+                    ))}
+                    {paidProjects.length > 3 && (
+                      <div className="pt-4 text-center">
+                        <Link to="/projects?type=paid" className="inline-flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider hover:underline">
+                          Lihat Semua Koleksi Eksklusif <ArrowRight size={16} />
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Free Projects Section */}
+            {(freeProjects.length > 0 || projects.length > 0) && (
+              <div className="bg-surface-container-lowest/40 rounded-3xl p-6 md:p-8 border border-outline-variant/10 flex flex-col">
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  className="flex flex-col mb-8"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary shadow-inner mb-4">
+                    <span className="text-2xl">🎁</span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-on-surface mb-1">Sumber Daya Gratis</h3>
+                    <p className="text-sm text-on-surface-variant font-medium">Akses langsung ke materi bernilai secara gratis</p>
+                  </div>
+                </motion.div>
+
+                {freeProjects.length === 0 ? (
+                  <div className="py-12 text-center border-2 border-dashed border-outline-variant/20 rounded-2xl mt-auto">
+                    <p className="text-on-surface-variant text-sm">Belum ada proyek gratis</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-6 flex-grow">
+                    {freeProjects.slice(0, 3).map((project, index) => (
+                      <ProjectCard key={project.id} project={project} index={index} />
+                    ))}
+                    {freeProjects.length > 3 && (
+                      <div className="pt-4 text-center mt-auto">
+                        <Link to="/projects?type=free" className="inline-flex items-center gap-2 text-secondary font-bold text-sm uppercase tracking-wider hover:underline">
+                          Lihat Semua Sumber Daya Gratis <ArrowRight size={16} />
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -703,41 +770,6 @@ const Contact = () => {
         </div>
       </div>
     </section>
-  );
-};
-
-const Footer = () => {
-  const socialLinks = [
-    { icon: <Instagram size={18} />, href: "https://instagram.com/muh.alimka", label: "Instagram" },
-    { icon: <Facebook size={18} />, href: "https://facebook.com/muh.alimka", label: "Facebook" },
-    { icon: <TikTokIcon size={18} />, href: "https://tiktok.com/@muh.alimka", label: "TikTok" },
-    { icon: <Youtube size={18} />, href: "https://www.youtube.com/@gurualimka9743", label: "YouTube" },
-  ];
-
-  return (
-    <footer className="w-full py-12 border-t border-outline-variant/10 bg-surface-container-low">
-      <div className="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto px-6 gap-6">
-        <div className="flex flex-col items-center md:items-start text-center md:text-left">
-          <p className="text-sm tracking-normal text-on-surface font-medium">
-            © 2026 | Muhammad Alimka | Guru, Fasilitator, dan Inovator
-          </p>
-        </div>
-        <div className="flex gap-6">
-          {socialLinks.map((link, index) => (
-            <a 
-              key={index}
-              href={link.href} 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-on-surface-variant hover:text-primary transition-all text-sm font-medium flex items-center gap-1"
-              aria-label={link.label}
-            >
-              {link.icon} <span className="hidden sm:inline">{link.label}</span>
-            </a>
-          ))}
-        </div>
-      </div>
-    </footer>
   );
 };
 

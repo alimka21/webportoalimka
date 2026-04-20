@@ -3,6 +3,9 @@ import { auth, db } from './firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { LogOut, Plus, Trash2, Edit2, Image as ImageIcon, Link as LinkIcon, Type, FileText, Heading } from 'lucide-react';
+import { supabase } from './lib/supabase';
+
+import { Footer } from './components/Footer';
 
 interface Project {
   id: string;
@@ -43,18 +46,49 @@ export default function Admin() {
   useEffect(() => {
     if (!isAdmin) return;
 
-    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const projectsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Project[];
-      setProjects(projectsData);
-    }, (error) => {
-      console.error("Error fetching projects: ", error);
-    });
+    const fetchProjects = async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error("Error fetching projects from Supabase: ", error);
+        // Fallback to Firebase for admin
+        const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          const projectsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Project[];
+          setProjects(projectsData);
+        });
+        return () => unsubscribe();
+      } else {
+        const mappedData = data.map(p => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            imageUrl: p.image_url,
+            link: p.link,
+            type: p.type,
+            createdAt: p.created_at,
+            authorUid: p.author_uid
+        })) as Project[];
+        setProjects(mappedData);
+      }
+    };
 
-    return () => unsubscribe();
+    fetchProjects();
+
+    const channel = supabase
+      .channel('admin-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => fetchProjects())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [isAdmin]);
 
   const handleLogin = async () => {
@@ -75,24 +109,50 @@ export default function Admin() {
     e.preventDefault();
     if (!user) return;
 
-    try {
-      const projectData = {
-        title,
-        description,
-        imageUrl,
-        link,
-        type,
-        authorUid: user.uid,
-      };
+    const projectDataSupabase = {
+      title,
+      description,
+      image_url: imageUrl,
+      link,
+      type,
+      author_uid: user.uid,
+    };
 
+    const projectDataFirebase = {
+      title,
+      description,
+      imageUrl,
+      link,
+      type,
+      authorUid: user.uid,
+    };
+
+    try {
       if (editingId) {
-        await updateDoc(doc(db, 'projects', editingId), projectData);
+        // Try Supabase first
+        const { error: supabaseError } = await supabase
+          .from('projects')
+          .update(projectDataSupabase)
+          .eq('id', editingId);
+
+        if (supabaseError) {
+          console.warn("Supabase update failed, trying Firebase fallback:", supabaseError);
+          await updateDoc(doc(db, 'projects', editingId), projectDataFirebase);
+        }
         setEditingId(null);
       } else {
-        await addDoc(collection(db, 'projects'), {
-          ...projectData,
-          createdAt: serverTimestamp(),
-        });
+        // Try Supabase first
+        const { error: supabaseError } = await supabase
+          .from('projects')
+          .insert([projectDataSupabase]);
+
+        if (supabaseError) {
+          console.warn("Supabase insert failed, trying Firebase fallback:", supabaseError);
+          await addDoc(collection(db, 'projects'), {
+            ...projectDataFirebase,
+            createdAt: serverTimestamp(),
+          });
+        }
       }
 
       // Reset form
@@ -103,7 +163,7 @@ export default function Admin() {
       setType('free');
     } catch (error) {
       console.error("Error saving project:", error);
-      alert("Gagal menyimpan proyek. Pastikan Anda memiliki akses admin.");
+      alert("Gagal menyimpan proyek.");
     }
   };
 
@@ -120,7 +180,15 @@ export default function Admin() {
   const handleDelete = async (id: string) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus proyek ini?")) {
       try {
-        await deleteDoc(doc(db, 'projects', id));
+        const { error: supabaseError } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', id);
+
+        if (supabaseError) {
+          console.warn("Supabase delete failed, trying Firebase fallback:", supabaseError);
+          await deleteDoc(doc(db, 'projects', id));
+        }
       } catch (error) {
         console.error("Error deleting project:", error);
         alert("Gagal menghapus proyek.");
@@ -353,6 +421,7 @@ export default function Admin() {
           )}
         </div>
       </main>
+      <Footer />
     </div>
   );
 }
