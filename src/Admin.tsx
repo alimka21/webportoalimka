@@ -12,6 +12,7 @@ interface Project {
   id: string;
   title: string;
   description: string;
+  promptText?: string;
   imageUrl: string;
   link: string;
   type: 'free' | 'paid';
@@ -28,6 +29,7 @@ export default function Admin() {
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [promptText, setPromptText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [link, setLink] = useState('');
   const [type, setType] = useState<'free' | 'paid'>('free');
@@ -70,6 +72,7 @@ export default function Admin() {
             id: p.id,
             title: p.title,
             description: p.description,
+            promptText: p.prompt_text,
             imageUrl: p.image_url,
             link: p.link,
             type: p.type,
@@ -113,6 +116,7 @@ export default function Admin() {
     const projectDataSupabase = {
       title,
       description,
+      prompt_text: promptText,
       image_url: imageUrl,
       link,
       type,
@@ -122,6 +126,7 @@ export default function Admin() {
     const projectDataFirebase = {
       title,
       description,
+      promptText,
       imageUrl,
       link,
       type,
@@ -176,6 +181,7 @@ export default function Admin() {
       // Reset form
       setTitle('');
       setDescription('');
+      setPromptText('');
       setImageUrl('');
       setLink('');
       setType('free');
@@ -193,6 +199,7 @@ export default function Admin() {
   const handleEdit = (project: Project) => {
     setTitle(project.title);
     setDescription(project.description);
+    setPromptText(project.promptText || '');
     setImageUrl(project.imageUrl);
     setLink(project.link);
     setType(project.type);
@@ -340,6 +347,20 @@ export default function Admin() {
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Detail Proyek / Teks Prompt Penuh</label>
+                <div className="relative">
+                  <FileText size={16} className="absolute left-3 top-3 text-on-surface-variant/50" />
+                  <textarea 
+                    value={promptText}
+                    onChange={(e) => setPromptText(e.target.value)}
+                    rows={8}
+                    className="w-full bg-surface-container pl-10 pr-4 py-2.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y font-mono whitespace-pre"
+                    placeholder="Masukkan detail penjelasan yang panjang atau teks prompt gratis di sini..."
+                  />
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Link Gambar (URL)</label>
                 <div className="relative">
                   <ImageIcon size={16} className="absolute left-3 top-3 text-on-surface-variant/50" />
@@ -398,6 +419,7 @@ export default function Admin() {
                       setEditingId(null);
                       setTitle('');
                       setDescription('');
+                      setPromptText('');
                       setImageUrl('');
                       setLink('');
                       setType('free');
@@ -412,55 +434,73 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* List Section */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-bold text-on-surface mb-4">Daftar Proyek ({projects.length})</h2>
+        {/* Dashboard Section */}
+        <div className="lg:col-span-2 space-y-4 overflow-hidden">
+          <h2 className="text-lg font-bold text-on-surface mb-4">Dashboard Proyek ({projects.length})</h2>
           
           {projects.length === 0 ? (
             <div className="bg-surface-container-lowest p-8 rounded-3xl text-center border border-outline-variant/10 border-dashed">
               <p className="text-on-surface-variant">Belum ada proyek. Tambahkan proyek pertama Anda!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {projects.map((project) => (
-                <div key={project.id} className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/10 shadow-sm flex flex-col">
-                  <div className="aspect-video w-full relative bg-surface-container">
-                    <img 
-                      src={project.imageUrl} 
-                      alt={project.title} 
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
-                      }}
-                    />
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded shadow-sm ${project.type === 'paid' ? 'bg-primary text-on-primary' : 'bg-secondary text-on-secondary'}`}>
-                        {project.type === 'paid' ? 'Berbayar' : 'Gratis'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-4 flex flex-col flex-grow">
-                    <h3 className="font-bold text-on-surface text-base mb-1 line-clamp-1">{project.title}</h3>
-                    <p className="text-xs text-on-surface-variant line-clamp-2 mb-4 flex-grow">{project.description}</p>
-                    
-                    <div className="flex gap-2 mt-auto pt-4 border-t border-outline-variant/10">
-                      <button 
-                        onClick={() => handleEdit(project)}
-                        className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold transition-colors"
-                      >
-                        <Edit2 size={14} /> Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(project.id)}
-                        className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-error/10 hover:bg-error/20 text-error rounded-lg text-xs font-bold transition-colors"
-                      >
-                        <Trash2 size={14} /> Hapus
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/10 overflow-hidden shadow-sm overflow-x-auto">
+              <table className="w-full min-w-[600px] text-left text-sm whitespace-nowrap">
+                <thead className="bg-surface-container text-on-surface-variant font-bold text-xs uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-4">Proyek</th>
+                    <th className="px-6 py-4">Tipe & Link</th>
+                    <th className="px-6 py-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/10">
+                  {projects.map((project) => (
+                    <tr key={project.id} className="hover:bg-surface-container/50 transition-colors">
+                      <td className="px-6 py-4 flex items-center gap-4">
+                         <img 
+                          src={project.imageUrl} 
+                          alt={project.title} 
+                          className="w-12 h-12 rounded bg-surface border border-outline-variant/20 object-cover shrink-0" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/100/100';
+                          }}
+                        />
+                        <div className="max-w-[200px]">
+                          <p className="font-bold text-on-surface truncate whitespace-normal leading-tight line-clamp-2" title={project.title}>{project.title}</p>
+                          <p className="text-xs text-on-surface-variant truncate whitespace-normal leading-tight line-clamp-1 mt-1" title={project.description}>{project.description}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded inline-block mb-1 ${project.type === 'paid' ? 'bg-primary text-on-primary' : 'bg-secondary text-on-secondary'}`}>
+                          {project.type === 'paid' ? 'Paid' : 'Free'}
+                        </span>
+                        <div>
+                          <a href={project.link} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
+                            Link <LinkIcon size={12} />
+                          </a>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => handleEdit(project)}
+                            className="p-2 bg-surface hover:bg-surface-container-high text-on-surface rounded-lg transition-colors border border-outline-variant/20 shadow-sm"
+                            title="Edit"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(project.id)}
+                            className="p-2 bg-error/10 hover:bg-error/20 text-error rounded-lg transition-colors border border-error/20 shadow-sm"
+                            title="Hapus"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

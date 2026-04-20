@@ -596,6 +596,7 @@ const Projects = () => {
             imageUrl: p.image_url,
             link: p.link,
             type: p.type,
+            promptText: p.prompt_text,
             createdAt: p.created_at,
             authorUid: p.author_uid
         }));

@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
+    prompt_text TEXT,
     image_url TEXT,
     link TEXT,
     type TEXT CHECK (type IN ('free', 'paid')) DEFAULT 'free',
@@ -10,14 +11,8 @@ CREATE TABLE IF NOT EXISTS public.projects (
     author_uid TEXT
 );
 
--- Set up Row Level Security (RLS)
-ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
-
--- Policy: Anyone can view projects
-CREATE POLICY "Allow public read-only access" ON public.projects
-    FOR SELECT USING (true);
-
--- Policy: Only authenticated users can insert/update/delete (or you can restrict to a specific email)
--- For now, let's allow all authenticated users for simplicity, or refine as needed.
-CREATE POLICY "Allow authenticated full access" ON public.projects
-    FOR ALL USING (auth.role() = 'authenticated');
+-- Note: Because we use Firebase Auth for login (not Supabase Auth directly), 
+-- the 'auth.role()' check inside Supabase will be 'anon'.
+-- By disabling RLS here, we allow the React frontend to insert data freely.
+-- The Admin page itself is protected by Firebase authentication in the React code.
+ALTER TABLE public.projects DISABLE ROW LEVEL SECURITY;

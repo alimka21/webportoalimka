@@ -5,12 +5,13 @@ import { db } from './firebase';
 import { supabase } from './lib/supabase';
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
-import { ExternalLink, ArrowLeft, Loader2 } from "lucide-react";
+import { ExternalLink, ArrowLeft, Loader2, Copy, Check } from "lucide-react";
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -38,6 +39,7 @@ export default function ProjectDetail() {
             id: data.id,
             title: data.title,
             description: data.description,
+            promptText: data.prompt_text,
             imageUrl: data.image_url,
             link: data.link,
             type: data.type,
@@ -80,6 +82,17 @@ export default function ProjectDetail() {
 
   const isPaid = project.type === 'paid';
 
+  const handleCopyPrompt = async () => {
+    if (!project.promptText) return;
+    try {
+      await navigator.clipboard.writeText(project.promptText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Gagal menyalin prompt: ", err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-surface">
       <Navbar showBack={true} />
@@ -119,6 +132,23 @@ export default function ProjectDetail() {
             <div className="prose prose-lg text-on-surface-variant max-w-none mb-12 whitespace-pre-wrap leading-relaxed">
               {project.description}
             </div>
+
+            {project.promptText && (
+              <div className="mb-12 bg-surface-container rounded-2xl overflow-hidden border border-outline-variant/20 shadow-sm relative group">
+                <div className="flex justify-between items-center bg-surface-container-high px-6 py-3 border-b border-outline-variant/10">
+                  <span className="text-sm font-bold text-on-surface uppercase tracking-wider">Detail / Prompt</span>
+                  <button 
+                    onClick={handleCopyPrompt}
+                    className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-surface hover:bg-surface-container-highest transition-colors text-primary"
+                  >
+                    {copied ? <><Check size={14} className="text-green-500" /> Tersalin</> : <><Copy size={14} /> Salin Teks</>}
+                  </button>
+                </div>
+                <div className="p-6 text-sm md:text-base font-mono text-on-surface-variant whitespace-pre-wrap overflow-x-auto max-h-[400px] overflow-y-auto">
+                  {project.promptText}
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-outline-variant/10 border-dashed">
               <a 
