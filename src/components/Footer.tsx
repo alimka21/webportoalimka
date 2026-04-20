@@ -1,4 +1,6 @@
 import { Instagram, Facebook, Youtube } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 
 // Custom TikTok Icon since Lucide doesn't have it in the standard set sometimes or it's named differently
 export const TikTokIcon = ({ size = 24 }: { size?: number }) => (
@@ -17,11 +19,28 @@ export const TikTokIcon = ({ size = 24 }: { size?: number }) => (
 );
 
 export const Footer = () => {
+  const [settings, setSettings] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from('settings')
+        .select('content')
+        .eq('id', 'site_config')
+        .single();
+      
+      if (data) {
+        setSettings(data.content);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const socialLinks = [
-    { icon: <Instagram size={18} />, href: "https://instagram.com/muh.alimka", label: "Instagram" },
-    { icon: <Facebook size={18} />, href: "https://facebook.com/muh.alimka", label: "Facebook" },
-    { icon: <TikTokIcon size={18} />, href: "https://tiktok.com/@muh.alimka", label: "TikTok" },
-    { icon: <Youtube size={18} />, href: "https://www.youtube.com/@gurualimka9743", label: "YouTube" },
+    { icon: <Instagram size={18} />, href: settings?.instagram_url || "https://instagram.com/muh.alimka", label: "Instagram" },
+    { icon: <Facebook size={18} />, href: settings?.facebook_url || "https://facebook.com/muh.alimka", label: "Facebook" },
+    { icon: <TikTokIcon size={18} />, href: settings?.tiktok_url || "https://tiktok.com/@muh.alimka", label: "TikTok" },
+    { icon: <Youtube size={18} />, href: settings?.youtube_url || "https://www.youtube.com/@gurualimka9743", label: "YouTube" },
   ];
 
   return (
@@ -29,14 +48,14 @@ export const Footer = () => {
       <div className="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto px-6 gap-6">
         <div className="flex flex-col items-center md:items-start text-center md:text-left">
           <p className="text-sm tracking-normal text-on-surface font-medium">
-            © {new Date().getFullYear()} Muhammad Alimka. Guru, Fasilitator, dan Inovator.
+            © {new Date().getFullYear()} {settings?.hero_title?.includes('Alimka') ? 'Muhammad Alimka' : (settings?.hero_title || 'Muhammad Alimka')}. Guru, Fasilitator, dan Inovator.
           </p>
           <p className="text-xs text-on-surface-variant/70 mt-1 uppercase tracking-widest font-bold">
-            All rights reserved.
+            Pendidik & Digital Kreator.
           </p>
         </div>
         <div className="flex gap-6">
-          {socialLinks.map((link, index) => (
+          {socialLinks.filter(l => l.href).map((link, index) => (
             <a 
               key={index}
               href={link.href} 
