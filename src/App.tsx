@@ -22,6 +22,7 @@ import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { supabase } from './lib/supabase';
+import { parseImageUrl } from './lib/utils';
 
 import { Navbar } from "./components/Navbar";
 import { Footer, TikTokIcon } from "./components/Footer";
@@ -514,9 +515,9 @@ const ProjectCard = ({ project, index }: { project: any, index: number, key?: st
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className={`rounded-3xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl ${
+      className={`rounded-2xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl ${
         isPaid 
-          ? 'bg-surface-container-lowest border-2 border-primary/30 before:absolute before:inset-0 before:bg-gradient-to-br before:from-primary/5 before:to-transparent before:z-0' 
+          ? 'bg-surface-container-lowest border border-outline-variant/30 relative rotate-[-1deg] hover:rotate-0 transition-transform duration-300 before:absolute before:inset-0 before:bg-[url("https://www.transparenttextures.com/patterns/white-paper.png")] before:opacity-10 before:z-0 shadow-[0_4px_20px_rgb(0,0,0,0.05)]' 
           : 'bg-surface-container-lowest border border-outline-variant/10'
       }`}
     >
@@ -530,34 +531,22 @@ const ProjectCard = ({ project, index }: { project: any, index: number, key?: st
             (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
           }}
         />
-        <div className="absolute top-4 right-4">
-          <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.1)] flex items-center gap-1.5 ${
-            isPaid ? 'bg-gradient-to-r from-primary to-primary-fixed text-on-primary' : 'bg-surface text-on-surface'
-          }`}>
-            {isPaid ? '⭐ Eksklusif' : '🎁 Gratis'}
-          </span>
-        </div>
+        {/* Icons removed per user request */}
       </div>
-      <div className="p-8 flex flex-col flex-grow relative z-10 bg-surface-container-lowest/80 backdrop-blur-sm">
+      <div className="p-8 flex flex-col flex-grow relative z-10 bg-surface-container-lowest/90 backdrop-blur-sm">
         {/* Decorative line */}
         <div className={`absolute top-0 left-8 w-12 h-1 rounded-b-full ${isPaid ? 'bg-primary' : 'bg-secondary'}`}></div>
         
         <h4 className={`text-xl font-bold mb-3 line-clamp-2 mt-2 transition-colors ${
           isPaid ? 'text-primary' : 'text-on-surface group-hover:text-primary'
         }`}>{project.title}</h4>
-        <p className="text-on-surface-variant text-sm mb-8 flex-grow leading-relaxed">{project.description}</p>
+        <p className="text-on-surface-variant text-sm mb-4 flex-grow leading-relaxed">{project.description}</p>
         
-        <Link 
-          to={`/projects/${project.id}`}
-          className={`inline-flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest transition-all py-3 px-6 rounded-xl w-full ${
-            isPaid 
-              ? 'bg-primary/10 text-primary hover:bg-primary hover:text-on-primary' 
-              : 'bg-secondary/10 text-secondary hover:bg-secondary hover:text-on-secondary'
-          }`}
-        >
-          Lihat Detail <ArrowRight size={16} />
-        </Link>
+        {/* Detail buttons hidden on homepage as requested */}
       </div>
+      <Link to={`/projects/${project.id}`} className="absolute inset-0 z-20">
+        <span className="sr-only">Lihat Project {project.title}</span>
+      </Link>
     </motion.div>
   );
 };
@@ -579,10 +568,14 @@ const Projects = () => {
         // Fallback to Firebase if Supabase fails (optional, but good for migration)
         const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-          const projectsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          const projectsData = snapshot.docs.map(doc => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              ...d,
+              imageUrl: parseImageUrl(d.imageUrl),
+            };
+          });
           setProjects(projectsData);
           setLoading(false);
         });
@@ -593,7 +586,7 @@ const Projects = () => {
             id: p.id,
             title: p.title,
             description: p.description,
-            imageUrl: p.image_url,
+            imageUrl: parseImageUrl(p.image_url),
             link: p.link,
             type: p.type,
             promptText: p.prompt_text,
@@ -637,7 +630,9 @@ const Projects = () => {
             <h2 className="text-4xl font-bold tracking-tighter text-on-surface mb-2">Showcase Proyek Terbaru</h2>
             <div className="h-1 w-20 bg-secondary"></div>
           </div>
-          <p className="text-on-surface-variant max-w-md">Kumpulan proyek digital pilihan yang berfokus pada inovasi pendidikan dan pemberdayaan guru.</p>
+          <Link to="/projects" className="inline-flex items-center gap-2 bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-colors px-6 py-3 rounded-xl font-black text-sm uppercase tracking-widest pointer-events-auto">
+            Lihat Semua Proyek <ArrowRight size={16} />
+          </Link>
         </div>
         
         {projects.length === 0 ? (
@@ -662,9 +657,6 @@ const Projects = () => {
                   viewport={{ once: true }}
                   className="flex flex-col mb-8"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner mb-4">
-                    <span className="text-2xl">⭐</span>
-                  </div>
                   <div>
                     <h3 className="text-2xl font-black text-on-surface mb-1">Koleksi Eksklusif</h3>
                     <p className="text-sm text-on-surface-variant font-medium">Proyek berbayar premium untuk memaksimalkan potensi edukasi</p>
@@ -680,13 +672,6 @@ const Projects = () => {
                     {paidProjects.slice(0, 3).map((project, index) => (
                       <ProjectCard key={project.id} project={project} index={index} />
                     ))}
-                    {paidProjects.length > 3 && (
-                      <div className="pt-4 text-center">
-                        <Link to="/projects?type=paid" className="inline-flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider hover:underline">
-                          Lihat Semua Koleksi Eksklusif <ArrowRight size={16} />
-                        </Link>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -701,9 +686,6 @@ const Projects = () => {
                   viewport={{ once: true }}
                   className="flex flex-col mb-8"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary shadow-inner mb-4">
-                    <span className="text-2xl">🎁</span>
-                  </div>
                   <div>
                     <h3 className="text-2xl font-black text-on-surface mb-1">Sumber Daya Gratis</h3>
                     <p className="text-sm text-on-surface-variant font-medium">Akses langsung ke materi bernilai secara gratis</p>
@@ -719,13 +701,6 @@ const Projects = () => {
                     {freeProjects.slice(0, 3).map((project, index) => (
                       <ProjectCard key={project.id} project={project} index={index} />
                     ))}
-                    {freeProjects.length > 3 && (
-                      <div className="pt-4 text-center mt-auto">
-                        <Link to="/projects?type=free" className="inline-flex items-center gap-2 text-secondary font-bold text-sm uppercase tracking-wider hover:underline">
-                          Lihat Semua Sumber Daya Gratis <ArrowRight size={16} />
-                        </Link>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { LogOut, Plus, Trash2, Edit2, Image as ImageIcon, Link as LinkIcon, Type, FileText, Heading } from 'lucide-react';
+import { LogOut, Plus, Trash2, Edit2, Image as ImageIcon, Link as LinkIcon, Type, FileText, Heading, LayoutDashboard, PlusCircle, Trash, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Swal from 'sweetalert2';
+import { parseImageUrl } from './lib/utils';
 
 import { Footer } from './components/Footer';
 
@@ -13,6 +14,7 @@ interface Project {
   title: string;
   description: string;
   promptText?: string;
+  supportUrls?: string[];
   imageUrl: string;
   link: string;
   type: 'free' | 'paid';
@@ -30,10 +32,14 @@ export default function Admin() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [promptText, setPromptText] = useState('');
+  const [supportUrls, setSupportUrls] = useState<string[]>(['']);
   const [imageUrl, setImageUrl] = useState('');
   const [link, setLink] = useState('');
   const [type, setType] = useState<'free' | 'paid'>('free');
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Tab state: 'dashboard' | 'form'
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'form'>('dashboard');
 
   const ADMIN_EMAIL = "kpbgalimka@gmail.com";
 
@@ -60,10 +66,15 @@ export default function Admin() {
         // Fallback to Firebase for admin
         const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-          const projectsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Project[];
+          const projectsData = snapshot.docs.map(doc => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              ...d,
+              supportUrls: (d.supportUrls || []).map((url: string) => parseImageUrl(url)),
+              imageUrl: parseImageUrl(d.imageUrl),
+            };
+          }) as Project[];
           setProjects(projectsData);
         });
         return () => unsubscribe();
@@ -73,7 +84,8 @@ export default function Admin() {
             title: p.title,
             description: p.description,
             promptText: p.prompt_text,
-            imageUrl: p.image_url,
+            supportUrls: (p.support_urls || []).map((url: string) => parseImageUrl(url)),
+            imageUrl: parseImageUrl(p.image_url),
             link: p.link,
             type: p.type,
             createdAt: p.created_at,
@@ -117,7 +129,8 @@ export default function Admin() {
       title,
       description,
       prompt_text: promptText,
-      image_url: imageUrl,
+      support_urls: supportUrls.filter(url => url.trim() !== '').map(url => parseImageUrl(url)),
+      image_url: parseImageUrl(imageUrl),
       link,
       type,
       author_uid: user.uid,
@@ -127,7 +140,8 @@ export default function Admin() {
       title,
       description,
       promptText,
-      imageUrl,
+      supportUrls: supportUrls.filter(url => url.trim() !== '').map(url => parseImageUrl(url)),
+      imageUrl: parseImageUrl(imageUrl),
       link,
       type,
       authorUid: user.uid,
@@ -182,9 +196,11 @@ export default function Admin() {
       setTitle('');
       setDescription('');
       setPromptText('');
+      setSupportUrls(['']);
       setImageUrl('');
       setLink('');
       setType('free');
+      setActiveTab('dashboard');
     } catch (error) {
       console.error("Error saving project:", error);
       Swal.fire({
@@ -200,10 +216,12 @@ export default function Admin() {
     setTitle(project.title);
     setDescription(project.description);
     setPromptText(project.promptText || '');
+    setSupportUrls(project.supportUrls?.length ? project.supportUrls : ['']);
     setImageUrl(project.imageUrl);
     setLink(project.link);
     setType(project.type);
     setEditingId(project.id);
+    setActiveTab('form');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -306,16 +324,48 @@ export default function Admin() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Form Section */}
-        <div className="lg:col-span-1">
-          <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-outline-variant/10 sticky top-24">
-            <h2 className="text-lg font-bold text-on-surface mb-6 flex items-center gap-2">
-              {editingId ? <Edit2 size={20} className="text-primary" /> : <Plus size={20} className="text-primary" />}
-              {editingId ? 'Edit Proyek' : 'Tambah Proyek Baru'}
-            </h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="max-w-7xl mx-auto px-6 mt-8 flex flex-col md:flex-row gap-8">
+        
+        {/* Sidebar */}
+        <aside className="w-full md:w-64 shrink-0 space-y-2">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+              activeTab === 'dashboard' ? 'bg-primary text-on-primary shadow-md' : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
+            }`}
+          >
+            <LayoutDashboard size={20} /> Dashboard Proyek
+          </button>
+          <button 
+            onClick={() => {
+              setEditingId(null);
+              setTitle('');
+              setDescription('');
+              setPromptText('');
+              setSupportUrls(['']);
+              setImageUrl('');
+              setLink('');
+              setType('free');
+              setActiveTab('form');
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+              activeTab === 'form' ? 'bg-primary text-on-primary shadow-md' : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
+            }`}
+          >
+            <PlusCircle size={20} /> Tambah Proyek
+          </button>
+        </aside>
+
+        {/* Dynamic Content */}
+        <main className="flex-grow">
+          {activeTab === 'form' && (
+            <div className="bg-surface-container-lowest p-8 md:p-10 rounded-[2rem] shadow-sm border border-outline-variant/10">
+              <h2 className="text-2xl font-black text-on-surface mb-8 flex items-center gap-3 border-b border-outline-variant/10 pb-6">
+                {editingId ? <Edit2 size={28} className="text-primary" /> : <Plus size={28} className="text-primary" />}
+                {editingId ? 'Edit Data Proyek' : 'Buat Proyek Baru'}
+              </h2>
+              
+              <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Judul Proyek</label>
                 <div className="relative">
@@ -361,22 +411,64 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Link Gambar (URL)</label>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Link Gambar Utama (URL) <span className="text-error">*</span></label>
                 <div className="relative">
-                  <ImageIcon size={16} className="absolute left-3 top-3 text-on-surface-variant/50" />
+                  <ImageIcon size={18} className="absolute left-4 top-3.5 text-on-surface-variant/50" />
                   <input 
                     type="url" 
                     value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
+                    onChange={(e) => setImageUrl(parseImageUrl(e.target.value))}
                     required
-                    className="w-full bg-surface-container pl-10 pr-4 py-2.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder="https://..."
+                    className="w-full bg-surface-container pl-12 pr-4 py-3.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="https://drive.google.com/..."
                   />
                 </div>
+                {imageUrl && (
+                   <img src={imageUrl} alt="Preview" className="mt-4 h-24 rounded-lg object-cover border border-outline-variant/20" referrerPolicy="no-referrer" />
+                )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Link Tujuan (URL)</label>
+                 <div className="flex justify-between items-end mb-2">
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider">Link Foto Pendukung (Opsional)</label>
+                    <button type="button" onClick={() => setSupportUrls([...supportUrls, ''])} className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                      <Plus size={12} /> Tambah Foto
+                    </button>
+                 </div>
+                 <div className="space-y-3">
+                   {supportUrls.map((url, index) => (
+                      <div key={index} className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <div className="relative flex-grow">
+                            <ImageIcon size={18} className="absolute left-4 top-3.5 text-on-surface-variant/50" />
+                            <input 
+                              type="url" 
+                              value={url}
+                              onChange={(e) => {
+                                const newUrls = [...supportUrls];
+                                newUrls[index] = parseImageUrl(e.target.value);
+                                setSupportUrls(newUrls);
+                              }}
+                              className="w-full bg-surface-container pl-12 pr-4 py-3.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
+                              placeholder="URL foto pendukung..."
+                            />
+                          </div>
+                          {supportUrls.length > 1 && (
+                            <button type="button" onClick={() => setSupportUrls(supportUrls.filter((_, i) => i !== index))} className="p-3.5 bg-error/10 text-error rounded-xl hover:bg-error/20 transition-colors">
+                              <Trash size={18} />
+                            </button>
+                          )}
+                        </div>
+                        {url && (
+                           <img src={url} alt="Preview Support" className="h-20 w-32 rounded-lg object-cover border border-outline-variant/20" referrerPolicy="no-referrer" />
+                        )}
+                      </div>
+                   ))}
+                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Link Tujuan (URL) <span className="text-error">*</span></label>
                 <div className="relative">
                   <LinkIcon size={16} className="absolute left-3 top-3 text-on-surface-variant/50" />
                   <input 
@@ -405,10 +497,10 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-2">
+              <div className="pt-8 flex gap-4 border-t border-outline-variant/10">
                 <button 
                   type="submit"
-                  className="flex-1 bg-primary text-on-primary py-2.5 rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors"
+                  className="flex-1 bg-primary text-on-primary py-4 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
                 >
                   {editingId ? 'Simpan Perubahan' : 'Tambah Proyek'}
                 </button>
@@ -420,11 +512,13 @@ export default function Admin() {
                       setTitle('');
                       setDescription('');
                       setPromptText('');
+                      setSupportUrls(['']);
                       setImageUrl('');
                       setLink('');
                       setType('free');
+                      setActiveTab('dashboard');
                     }}
-                    className="px-4 bg-surface-container text-on-surface py-2.5 rounded-xl font-bold text-sm hover:bg-surface-container-high transition-colors"
+                    className="px-8 bg-surface-container text-on-surface py-4 rounded-xl font-bold uppercase tracking-widest text-sm hover:bg-surface-container-high transition-colors"
                   >
                     Batal
                   </button>
@@ -432,79 +526,91 @@ export default function Admin() {
               </div>
             </form>
           </div>
-        </div>
+          )}
 
-        {/* Dashboard Section */}
-        <div className="lg:col-span-2 space-y-4 overflow-hidden">
-          <h2 className="text-lg font-bold text-on-surface mb-4">Dashboard Proyek ({projects.length})</h2>
-          
-          {projects.length === 0 ? (
-            <div className="bg-surface-container-lowest p-8 rounded-3xl text-center border border-outline-variant/10 border-dashed">
-              <p className="text-on-surface-variant">Belum ada proyek. Tambahkan proyek pertama Anda!</p>
-            </div>
-          ) : (
-            <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/10 overflow-hidden shadow-sm overflow-x-auto">
-              <table className="w-full min-w-[600px] text-left text-sm whitespace-nowrap">
-                <thead className="bg-surface-container text-on-surface-variant font-bold text-xs uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-4">Proyek</th>
-                    <th className="px-6 py-4">Tipe & Link</th>
-                    <th className="px-6 py-4 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/10">
-                  {projects.map((project) => (
-                    <tr key={project.id} className="hover:bg-surface-container/50 transition-colors">
-                      <td className="px-6 py-4 flex items-center gap-4">
-                         <img 
-                          src={project.imageUrl} 
-                          alt={project.title} 
-                          className="w-12 h-12 rounded bg-surface border border-outline-variant/20 object-cover shrink-0" 
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/100/100';
-                          }}
-                        />
-                        <div className="max-w-[200px]">
-                          <p className="font-bold text-on-surface truncate whitespace-normal leading-tight line-clamp-2" title={project.title}>{project.title}</p>
-                          <p className="text-xs text-on-surface-variant truncate whitespace-normal leading-tight line-clamp-1 mt-1" title={project.description}>{project.description}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded inline-block mb-1 ${project.type === 'paid' ? 'bg-primary text-on-primary' : 'bg-secondary text-on-secondary'}`}>
-                          {project.type === 'paid' ? 'Paid' : 'Free'}
-                        </span>
-                        <div>
-                          <a href={project.link} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
-                            Link <LinkIcon size={12} />
-                          </a>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button 
-                            onClick={() => handleEdit(project)}
-                            className="p-2 bg-surface hover:bg-surface-container-high text-on-surface rounded-lg transition-colors border border-outline-variant/20 shadow-sm"
-                            title="Edit"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(project.id)}
-                            className="p-2 bg-error/10 hover:bg-error/20 text-error rounded-lg transition-colors border border-error/20 shadow-sm"
-                            title="Hapus"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-end mb-6">
+                <h2 className="text-2xl font-black text-on-surface">Dashboard Proyek ({projects.length})</h2>
+                <button 
+                  onClick={() => setActiveTab('form')}
+                  className="hidden md:flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary/20 transition-colors"
+                >
+                  <Plus size={16} /> Buat Baru
+                </button>
+              </div>
+              
+              {projects.length === 0 ? (
+                <div className="bg-surface-container-lowest p-12 rounded-[2rem] text-center border border-outline-variant/10 border-dashed">
+                  <div className="w-20 h-20 bg-surface-container rounded-full flex items-center justify-center mx-auto mb-6 text-on-surface-variant font-black text-3xl">!</div>
+                  <p className="text-on-surface-variant text-lg">Belum ada proyek. Ayo mulai tambahkan proyek memukau!</p>
+                  <button onClick={() => setActiveTab('form')} className="mt-6 bg-primary text-on-primary px-6 py-3 rounded-xl font-bold">Tambah Proyek Pertama</button>
+                </div>
+              ) : (
+                <div className="bg-surface-container-lowest rounded-[2rem] border border-outline-variant/10 shadow-sm overflow-x-auto">
+                  <table className="w-full min-w-[600px] text-left text-sm whitespace-nowrap">
+                    <thead className="bg-surface-container-low text-on-surface-variant font-black text-xs uppercase tracking-widest">
+                      <tr>
+                        <th className="px-6 py-5">Proyek</th>
+                        <th className="px-6 py-5">Tipe & Link</th>
+                        <th className="px-6 py-5 text-right flex-shrink-0 min-w[120px]">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/10">
+                      {projects.map((project) => (
+                        <tr key={project.id} className="hover:bg-surface-container-lowest/50 transition-colors group">
+                          <td className="px-6 py-5 flex items-center gap-5">
+                             <img 
+                              src={project.imageUrl} 
+                              alt={project.title} 
+                              className="w-16 h-16 rounded-xl bg-surface border border-outline-variant/20 object-cover shrink-0 shadow-sm" 
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/100/100';
+                              }}
+                            />
+                            <div className="max-w-[250px]">
+                              <p className="font-bold text-base text-on-surface truncate whitespace-normal leading-tight line-clamp-2" title={project.title}>{project.title}</p>
+                              <p className="text-xs text-on-surface-variant truncate whitespace-normal leading-tight line-clamp-1 mt-1.5" title={project.description}>{project.description}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 align-top pt-8">
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg inline-block mb-2 ${project.type === 'paid' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-secondary/10 text-secondary border border-secondary/20'}`}>
+                              {project.type === 'paid' ? 'Paid / Beli' : 'Free / Gratis'}
+                            </span>
+                            <div>
+                              <a href={project.link} target="_blank" rel="noreferrer" className="text-on-surface-variant hover:text-primary transition-colors text-xs flex items-center gap-1.5 font-semibold">
+                                Buka Link <LinkIcon size={12} />
+                              </a>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 text-right align-top pt-8 min-w-[120px]">
+                            <div className="flex justify-end gap-2">
+                              <button 
+                                onClick={() => handleEdit(project)}
+                                className="p-2.5 bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded-xl transition-colors border border-outline-variant/20 shadow-sm"
+                                title="Edit"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(project.id)}
+                                className="p-2.5 bg-error/5 hover:bg-error/10 text-error rounded-xl transition-colors border border-error/20 auto-pointer shadow-sm"
+                                title="Hapus"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      </main>
+        </main>
+      </div>
       <Footer />
     </div>
   );

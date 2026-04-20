@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { supabase } from './lib/supabase';
+import { parseImageUrl } from './lib/utils';
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { ExternalLink, ArrowLeft, Loader2, Copy, Check } from "lucide-react";
@@ -30,7 +31,13 @@ export default function ProjectDetail() {
            const docRef = doc(db, 'projects', id);
            const docSnap = await getDoc(docRef);
            if (docSnap.exists()) {
-             setProject({ id: docSnap.id, ...docSnap.data() });
+             const fbData = docSnap.data();
+             setProject({ 
+               id: docSnap.id, 
+               ...fbData,
+               supportUrls: (fbData.supportUrls || []).map((url: string) => parseImageUrl(url)),
+               imageUrl: parseImageUrl(fbData.imageUrl)
+             });
            } else {
              console.error("No such document in Firebase either!");
            }
@@ -40,7 +47,8 @@ export default function ProjectDetail() {
             title: data.title,
             description: data.description,
             promptText: data.prompt_text,
-            imageUrl: data.image_url,
+            supportUrls: (data.support_urls || []).map((url: string) => parseImageUrl(url)),
+            imageUrl: parseImageUrl(data.image_url),
             link: data.link,
             type: data.type,
             createdAt: data.created_at,
@@ -119,7 +127,7 @@ export default function ProjectDetail() {
                <span className={`text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl shadow-lg border flex items-center gap-2 ${
                   isPaid ? 'bg-gradient-to-r from-primary to-primary-fixed text-on-primary border-transparent' : 'bg-surface text-on-surface border-outline-variant/20'
                 }`}>
-                  {isPaid ? '⭐ Eksklusif' : '🎁 Gratis'}
+                  {isPaid ? 'Eksklusif' : 'Gratis'}
                 </span>
             </div>
           </div>
@@ -146,6 +154,27 @@ export default function ProjectDetail() {
                 </div>
                 <div className="p-6 text-sm md:text-base font-mono text-on-surface-variant whitespace-pre-wrap overflow-x-auto max-h-[400px] overflow-y-auto">
                   {project.promptText}
+                </div>
+              </div>
+            )}
+
+            {project.supportUrls && project.supportUrls.length > 0 && (
+              <div className="mb-12 space-y-4">
+                <h3 className="text-xl font-bold text-on-surface border-b border-outline-variant/10 pb-4 mb-6">Galeri / Penunjang Proyek</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {project.supportUrls.map((url: string, idx: number) => (
+                    <div key={idx} className="aspect-video relative rounded-2xl overflow-hidden border border-outline-variant/20 shadow-sm group">
+                      <img 
+                        src={url} 
+                        alt={`Support ${idx + 1}`} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

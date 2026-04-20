@@ -4,6 +4,7 @@ import { Search, Filter, ArrowRight } from "lucide-react";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { supabase } from './lib/supabase';
+import { parseImageUrl } from './lib/utils';
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { Link, useSearchParams } from "react-router-dom";
@@ -30,10 +31,14 @@ export default function ProjectsPage() {
         // Fallback to Firebase
         const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-          const projectsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          const projectsData = snapshot.docs.map(doc => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              ...d,
+              imageUrl: parseImageUrl(d.imageUrl),
+            };
+          });
           setProjects(projectsData);
         }, (err) => {
           console.error("Error fetching projects from Firebase: ", err);
@@ -44,7 +49,7 @@ export default function ProjectsPage() {
             id: p.id,
             title: p.title,
             description: p.description,
-            imageUrl: p.image_url,
+            imageUrl: parseImageUrl(p.image_url),
             link: p.link,
             type: p.type,
             createdAt: p.created_at,
@@ -139,9 +144,9 @@ export default function ProjectsPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: (index % 10) * 0.05 }}
-                  className={`rounded-3xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl ${
+                  className={`rounded-2xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl ${
                     isPaid 
-                      ? 'bg-surface-container-lowest border-2 border-primary/30 before:absolute before:inset-0 before:bg-gradient-to-br before:from-primary/5 before:to-transparent before:z-0' 
+                      ? 'bg-surface-container-lowest border border-outline-variant/30 relative rotate-[-1deg] hover:rotate-0 transition-transform duration-300 before:absolute before:inset-0 before:bg-[url("https://www.transparenttextures.com/patterns/white-paper.png")] before:opacity-10 before:z-0 shadow-[0_4px_20px_rgb(0,0,0,0.05)]' 
                       : 'bg-surface-container-lowest border border-outline-variant/10'
                   }`}
                 >
@@ -155,30 +160,16 @@ export default function ProjectsPage() {
                         (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
                       }}
                     />
-                    <div className="absolute top-4 right-4 flex gap-2">
-                      <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-md flex items-center gap-1.5 ${
-                        isPaid ? 'bg-gradient-to-r from-primary to-primary-fixed text-on-primary' : 'bg-surface text-on-surface'
-                      }`}>
-                        {isPaid ? '⭐ Eksklusif' : '🎁 Gratis'}
-                      </span>
-                    </div>
                   </div>
-                  <div className="p-6 flex flex-col flex-grow relative z-10 bg-surface-container-lowest/80 backdrop-blur-sm">
+                  <div className="p-8 flex flex-col flex-grow relative z-10 bg-surface-container-lowest/90 backdrop-blur-sm">
                     <h4 className={`text-xl font-bold mb-3 line-clamp-2 transition-colors ${
                       isPaid ? 'text-primary' : 'text-on-surface'
                     }`}>{project.title}</h4>
-                    
-                    <Link 
-                      to={`/projects/${project.id}`}
-                      className={`mt-auto inline-flex items-center justify-center gap-2 font-bold text-sm uppercase tracking-wider transition-all py-3 px-6 rounded-xl w-full ${
-                        isPaid 
-                          ? 'bg-primary/10 text-primary hover:bg-primary hover:text-on-primary' 
-                          : 'bg-secondary/10 text-secondary hover:bg-secondary hover:text-on-secondary'
-                      }`}
-                    >
-                      Lihat Detail
-                    </Link>
+                    <p className="text-on-surface-variant text-sm mb-4 flex-grow leading-relaxed">{project.description}</p>
                   </div>
+                  <Link to={`/projects/${project.id}`} className="absolute inset-0 z-20">
+                    <span className="sr-only">Lihat Detail {project.title}</span>
+                  </Link>
                 </motion.div>
               );
             })}

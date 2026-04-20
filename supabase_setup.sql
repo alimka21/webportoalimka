@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     title TEXT NOT NULL,
     description TEXT,
     prompt_text TEXT,
+    support_urls TEXT[],
     image_url TEXT,
     link TEXT,
     type TEXT CHECK (type IN ('free', 'paid')) DEFAULT 'free',
