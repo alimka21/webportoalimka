@@ -8,7 +8,7 @@ export const uploadAndCompressImage = async (file: File, path: string = 'img'): 
     const options = {
       maxSizeMB: 1,
       maxWidthOrHeight: 1200,
-      useWebWorker: true,
+      useWebWorker: false, // Disabled web worker to prevent hanging in some environments
     };
     
     // Compress the file

@@ -63,8 +63,9 @@ const CustomizePanel = () => {
       } else {
          setLocalSettings(prev => prev ? ({ ...prev, [key]: url }) : prev);
       }
-    } catch {
-      Swal.fire('Gagal!', 'Upload gagal.', 'error');
+    } catch (error: any) {
+      console.error("Local Upload Error:", error);
+      Swal.fire('Gagal!', `Upload gagal: ${error?.message || 'Kesalahan koneksi'}`, 'error');
     } finally {
       setUploadProgress(prev => ({ ...prev, [key]: false }));
       event.target.value = '';
@@ -441,10 +442,11 @@ export default function Admin() {
     try {
       const url = await uploadAndCompressImage(file, 'projects');
       setter(url);
-    } catch (error) {
+    } catch (error: any) {
+       console.error("Upload Error:", error);
        Swal.fire({
-          title: 'Gagal!',
-          text: 'Terjadi kesalahan saat mengupload gambar.',
+          title: 'Gagal Mengunggah!',
+          text: `Kesalahan: ${error?.message || 'Gagal tersambung ke penyimpanan'}`,
           icon: 'error',
           confirmButtonText: 'Tutup'
         });
