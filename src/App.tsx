@@ -27,7 +27,13 @@ import { parseImageUrl } from './lib/utils';
 import { Navbar } from "./components/Navbar";
 import { Footer, TikTokIcon } from "./components/Footer";
 
+import { useHomepageSettings } from './hooks/useSettings';
+
 const Hero = () => {
+  const { settings, loading } = useHomepageSettings();
+  
+  if (loading) return null;
+
   return (
     <section id="home" className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -39,13 +45,13 @@ const Hero = () => {
           className="order-2 md:order-1"
         >
           <span className="inline-block px-4 py-1.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant text-xs font-bold tracking-widest uppercase mb-6">
-            Guru Informatika
+            {settings.heroTag}
           </span>
           <h1 className="text-5xl md:text-7xl font-extrabold text-on-surface tracking-tighter leading-tight mb-6">
-            Halo, Saya Muhammad Alimka
+            {settings.heroTitle}
           </h1>
           <p className="text-xl md:text-2xl text-on-surface-variant font-medium mb-8 leading-relaxed max-w-lg">
-            Saya adalah Guru Mata Pelajaran Informatika di UPTD SMPN 6 Moncongloe, Maros. Saya memiliki tugas tambahan dan rekam jejak fokus di Bidang Pendidikan dan Teknologi. Mari berkenalan lebih lanjut dengan saya.
+            {settings.heroDesc}
           </p>
           <div className="flex flex-wrap gap-4">
             <a href="#projects" className="btn-primary text-white px-8 py-4 rounded-xl font-bold tracking-wide uppercase text-sm inline-flex items-center gap-2">
@@ -66,8 +72,8 @@ const Hero = () => {
         >
           <div className="relative w-full max-w-md aspect-square bg-surface-container-high rounded-[2rem] overflow-hidden rotate-3 hover:rotate-0 transition-transform duration-500 shadow-xl">
             <img 
-              src="https://lh3.googleusercontent.com/d/1baU393E_Z-tuJ2C9U82-5Ls4fmu5q5Hx" 
-              alt="Profil Muhammad Alimka" 
+              src={parseImageUrl(settings.heroImage)} 
+              alt="Profil Utama" 
               className="w-full h-full object-cover scale-x-[-1]"
               referrerPolicy="no-referrer"
             />
@@ -90,6 +96,9 @@ const About = () => {
     { icon: <Youtube size={18} />, href: "https://www.youtube.com/@gurualimka9743", label: "YouTube", color: "hover:bg-[#FF0000]" },
   ];
 
+  const { settings, loading } = useHomepageSettings();
+  if (loading) return null;
+
   return (
     <section id="about" className="py-20 bg-surface">
       <div className="max-w-7xl mx-auto px-6">
@@ -111,23 +120,23 @@ const About = () => {
               <div>
                 <h3 className="text-xl font-bold text-primary mb-4">Visi Pendidik Digital</h3>
                 <p className="text-on-surface-variant leading-relaxed">
-                  Sebagai pendidik di UPTD SMPN 6 Moncongloe, Maros, saya berdedikasi menjembatani celah antara pendidikan tradisional dan era digital. Saya percaya teknologi adalah katalisator pemberdayaan generasi masa depan Indonesia. Mari kita sama-sama mendorong Transformasi Digitalisasi Pembelajaran di Indonesia
+                  {settings.aboutVision}
                 </p>
               </div>
               <div className="mt-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-center gap-4 w-full">
                   <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/20 shadow-sm flex-shrink-0">
                     <img 
-                      src="https://lh3.googleusercontent.com/d/1baU393E_Z-tuJ2C9U82-5Ls4fmu5q5Hx" 
-                      alt="Muhammad Alimka" 
+                      src={parseImageUrl(settings.aboutImage)} 
+                      alt={settings.aboutName} 
                       className="w-full h-full object-cover scale-x-[-1]"
                       referrerPolicy="no-referrer"
                     />
                   </div>
                   <div className="flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-8 w-full">
                     <div>
-                      <p className="text-base font-bold text-on-surface">Muhammad Alimka, S.Pd., M.Pd.</p>
-                      <p className="text-sm text-on-surface-variant font-medium">PNS Guru Informatika</p>
+                      <p className="text-base font-bold text-on-surface">{settings.aboutName}</p>
+                      <p className="text-sm text-on-surface-variant font-medium">{settings.aboutJob}</p>
                     </div>
                     
                     <div className="flex gap-2">
@@ -177,22 +186,22 @@ const About = () => {
             className="lg:col-span-1 bg-inverse-surface text-inverse-on-surface p-8 rounded-3xl shadow-xl flex flex-col justify-around text-center border border-white/5"
           >
             <div className="py-2">
-              <p className="text-4xl font-black text-primary-fixed">7+</p>
+              <p className="text-4xl font-black text-primary-fixed">{settings.statYears}</p>
               <p className="text-[10px] uppercase tracking-widest font-bold opacity-70">Tahun Mengajar</p>
             </div>
             <div className="h-px w-full bg-white/10"></div>
             <div className="py-2">
-              <p className="text-4xl font-black text-primary-fixed">1000+</p>
+              <p className="text-4xl font-black text-primary-fixed">{settings.statTrainees}</p>
               <p className="text-[10px] uppercase tracking-widest font-bold opacity-70">Peserta Pelatihan</p>
             </div>
             <div className="h-px w-full bg-white/10"></div>
             <div className="py-2">
-              <p className="text-4xl font-black text-primary-fixed">20+</p>
+              <p className="text-4xl font-black text-primary-fixed">{settings.statProjects}</p>
               <p className="text-[10px] uppercase tracking-widest font-bold opacity-70">Proyek Digital</p>
             </div>
             <div className="h-px w-full bg-white/10"></div>
             <div className="py-2">
-              <p className="text-4xl font-black text-primary-fixed">100+</p>
+              <p className="text-4xl font-black text-primary-fixed">{settings.statWorkshops}</p>
               <p className="text-[10px] uppercase tracking-widest font-bold opacity-70">Pelatihan & Workshop</p>
             </div>
           </motion.div>
@@ -203,31 +212,11 @@ const About = () => {
 };
 
 const Qualifications = () => {
-  const education = [
-    { 
-      year: "Tahun 2021 - 2023", 
-      title: "S2 - Magister Pendidikan", 
-      major: "Pendidikan Teknik Informatika dan Komputer",
-      institution: "Universitas Negeri Makassar" 
-    },
-    { 
-      year: "Tahun 2013 - 2018", 
-      title: "S1 - Sarjana Pendidikan", 
-      major: "Pendidikan Teknik Informatika dan Komputer",
-      institution: "Universitas Negeri Makassar" 
-    },
-    { 
-      year: "Tahun 2010 - 2013", 
-      title: "Sekolah Menengah Atas (SMA)", 
-      institution: "SMAN 1 Sabbangparu, Kab. Wajo" 
-    },
-  ];
+  const { settings, loading } = useHomepageSettings();
+  if (loading) return null;
 
-  const experience = [
-    { year: "2019 — Sekarang", title: "Guru Informatika", institution: "UPTD SMPN 6 Moncongloe, Maros" },
-    { year: "2026 — Sekarang", title: "Ketua MGMP Informatika", institution: "Kabupaten Maros" },
-    { year: "2022 — Sekarang", title: "Ketua Komunitas Sapa Belajar Indonesia", institution: "SMPN 6 Moncongloe, Maros" },
-  ];
+  const education = settings.education || [];
+  const experience = settings.experience || [];
 
   return (
     <section id="qualifications" className="py-24 bg-surface">
@@ -349,7 +338,7 @@ const Skillset = () => {
               <div className="relative bg-surface-container-lowest p-8 rounded-[2rem] border border-outline-variant/10 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 h-full flex flex-col">
                 <div className="flex justify-between items-start mb-6">
                   <h4 className="text-xl font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">{skill.name}</h4>
-                  <div className="text-3xl font-black text-primary/20 group-hover:text-primary transition-colors">
+                  <div className="text-3xl font-black text-black">
                     {skill.percentage}%
                   </div>
                 </div>
@@ -402,15 +391,11 @@ const Skillset = () => {
 };
 
 const Awards = () => {
-  const awards = [
-    { title: "Duta Teknologi Kemendikbudristek", subtitle: "Tahun 2022 — Sekarang | Kemendikbudristek RI", highlight: true },
-    { title: "Guru Inspiratif Nasional Jenjang SMP", subtitle: "Tahun 2022 | Kemendikbudristek RI" },
-    { title: "Fasilitator Perencanaan Pembelajaran", subtitle: "Puskurjar Kemdikbudristek RI" },
-    { title: "Fasilitator Guru Penggerak", subtitle: "Kemdikbudristek RI" },
-    { title: "Fasilitator Koding dan Kecerdasan Artifisial (KKA)", subtitle: "Kemdikdasmen RI" },
-    { title: "Fasilitator Digitalisasi Pembelajaran", subtitle: "Kemdikdasmen RI" },
-    { title: "Guru Pejuang Digital Level 3", subtitle: "Kemdikdasmen RI" },
-  ];
+  const { settings, loading } = useHomepageSettings();
+  if (loading) return null;
+
+  const awards = settings.awards || [];
+  const awardImages = settings.awardImages || [];
 
   return (
     <section id="awards" className="py-24 bg-surface-container-lowest relative overflow-hidden">
@@ -431,18 +416,18 @@ const Awards = () => {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="w-[60%] rounded-3xl overflow-hidden shadow-lg relative group"
+                className="w-[60%] rounded-3xl overflow-hidden shadow-lg relative group bg-surface-container"
               >
-                <img src="https://lh3.googleusercontent.com/d/1eaiF_NlF5r--JCxXEvOLJSdB1om-xVsz" alt="Tugas Tambahan 1" className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />
+                {awardImages[0] && <img src={parseImageUrl(awardImages[0])} alt="Tugas Tambahan 1" className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />}
               </motion.div>
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.2 }}
-                className="w-[40%] rounded-3xl overflow-hidden shadow-lg relative group"
+                className="w-[40%] rounded-3xl overflow-hidden shadow-lg relative group bg-surface-container"
               >
-                <img src="https://lh3.googleusercontent.com/d/1sWNDHiQqyxvzauQA-rdhGAvbi2QlvSgS" alt="Tugas Tambahan 2" className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />
+                {awardImages[1] && <img src={parseImageUrl(awardImages[1])} alt="Tugas Tambahan 2" className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />}
               </motion.div>
             </div>
             <div className="flex gap-4 h-[45%]">
@@ -451,18 +436,18 @@ const Awards = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.4 }}
-                className="w-[40%] rounded-3xl overflow-hidden shadow-lg relative group"
+                className="w-[40%] rounded-3xl overflow-hidden shadow-lg relative group bg-surface-container"
               >
-                <img src="https://lh3.googleusercontent.com/d/1dmpq9L-IVNWE8hpu2Nos4nQwWYs0htvq" alt="Tugas Tambahan 3" className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />
+                {awardImages[2] && <img src={parseImageUrl(awardImages[2])} alt="Tugas Tambahan 3" className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />}
               </motion.div>
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.6 }}
-                className="w-[60%] rounded-3xl overflow-hidden shadow-lg relative group"
+                className="w-[60%] rounded-3xl overflow-hidden shadow-lg relative group bg-surface-container"
               >
-                <img src="https://lh3.googleusercontent.com/d/14Uw1bpKJtk1W__VbcJeYBk6xMucExZbF" alt="Tugas Tambahan 4" className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />
+                {awardImages[3] && <img src={parseImageUrl(awardImages[3])} alt="Tugas Tambahan 4" className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />}
               </motion.div>
             </div>
           </div>
@@ -556,67 +541,25 @@ const Projects = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        console.error("Error fetching projects from Supabase: ", error);
-        // Fallback to Firebase if Supabase fails (optional, but good for migration)
-        const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const projectsData = snapshot.docs.map(doc => {
-            const d = doc.data();
-            return {
-              id: doc.id,
-              ...d,
-              imageUrl: parseImageUrl(d.imageUrl),
-            };
-          });
-          setProjects(projectsData);
-          setLoading(false);
-        });
-        return () => unsubscribe();
-      } else {
-        // Map snake_case to camelCase for UI compatibility
-        const mappedData = data.map(p => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
-            imageUrl: parseImageUrl(p.image_url),
-            link: p.link,
-            type: p.type,
-            promptText: p.prompt_text,
-            createdAt: p.created_at,
-            authorUid: p.author_uid
-        }));
-        setProjects(mappedData);
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const projectsData = snapshot.docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          ...d,
+          imageUrl: parseImageUrl(d.imageUrl),
+        };
+      });
+      setProjects(projectsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching projects from Firebase:", error);
+      setLoading(false);
+    });
 
-    fetchProjects();
-
-    // Real-time subscription
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'projects',
-        },
-        () => fetchProjects()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => unsubscribe();
   }, []);
 
   const paidProjects = projects.filter(p => p.type === 'paid');
@@ -625,14 +568,9 @@ const Projects = () => {
   return (
     <section id="projects" className="py-24 bg-surface">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-          <div>
-            <h2 className="text-4xl font-bold tracking-tighter text-on-surface mb-2">Showcase Proyek Terbaru</h2>
-            <div className="h-1 w-20 bg-secondary"></div>
-          </div>
-          <Link to="/projects" className="inline-flex items-center gap-2 bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-colors px-6 py-3 rounded-xl font-black text-sm uppercase tracking-widest pointer-events-auto">
-            Lihat Semua Proyek <ArrowRight size={16} />
-          </Link>
+        <div className="flex flex-col items-center text-center mb-16 gap-4">
+          <h2 className="text-4xl font-bold tracking-tighter text-on-surface mb-2">Showcase Proyek Terbaru</h2>
+          <div className="h-1 w-20 bg-secondary"></div>
         </div>
         
         {projects.length === 0 ? (
@@ -652,13 +590,13 @@ const Projects = () => {
             {(paidProjects.length > 0 || projects.length > 0) && (
               <div className="bg-surface-container-lowest/40 rounded-3xl p-6 md:p-8 border border-outline-variant/10">
                 <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  className="flex flex-col mb-8"
+                  className="flex flex-col items-center text-center mb-8"
                 >
                   <div>
-                    <h3 className="text-2xl font-black text-on-surface mb-1">Koleksi Eksklusif</h3>
+                    <h3 className="text-2xl font-black text-on-surface mb-1">Eksklusif (Beli)</h3>
                     <p className="text-sm text-on-surface-variant font-medium">Proyek berbayar premium untuk memaksimalkan potensi edukasi</p>
                   </div>
                 </motion.div>
@@ -681,13 +619,13 @@ const Projects = () => {
             {(freeProjects.length > 0 || projects.length > 0) && (
               <div className="bg-surface-container-lowest/40 rounded-3xl p-6 md:p-8 border border-outline-variant/10 flex flex-col">
                 <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  className="flex flex-col mb-8"
+                  className="flex flex-col items-center text-center mb-8"
                 >
                   <div>
-                    <h3 className="text-2xl font-black text-on-surface mb-1">Sumber Daya Gratis</h3>
+                    <h3 className="text-2xl font-black text-on-surface mb-1">Gratis</h3>
                     <p className="text-sm text-on-surface-variant font-medium">Akses langsung ke materi bernilai secara gratis</p>
                   </div>
                 </motion.div>
@@ -705,6 +643,14 @@ const Projects = () => {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {projects.length > 0 && (
+          <div className="mt-16 text-center">
+            <Link to="/projects" className="inline-flex items-center gap-2 bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-colors px-8 py-4 rounded-xl font-black text-sm uppercase tracking-widest pointer-events-auto">
+              Lihat Semua Proyek <ArrowRight size={18} />
+            </Link>
           </div>
         )}
       </div>

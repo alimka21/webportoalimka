@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { LogOut, Plus, Trash2, Edit2, Image as ImageIcon, Link as LinkIcon, Type, FileText, Heading, LayoutDashboard, PlusCircle, Trash, X } from 'lucide-react';
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, setDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { LogOut, Plus, Trash2, Edit2, Image as ImageIcon, Link as LinkIcon, Type, FileText, Heading, LayoutDashboard, PlusCircle, Trash, X, Upload, Loader2, Settings } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Swal from 'sweetalert2';
 import { parseImageUrl } from './lib/utils';
+import { uploadAndCompressImage } from './lib/storage';
+import { useHomepageSettings, HomepageSettings } from './hooks/useSettings';
 
 import { Footer } from './components/Footer';
 
@@ -22,6 +24,294 @@ interface Project {
   authorUid: string;
 }
 
+const CustomizePanel = () => {
+  const { settings, loading } = useHomepageSettings();
+  const [localSettings, setLocalSettings] = useState<HomepageSettings | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: boolean }>({});
+
+  useEffect(() => {
+    if (settings) setLocalSettings(settings);
+  }, [settings]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!localSettings) return;
+    setIsSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'homepage'), localSettings);
+      Swal.fire('Berhasil!', 'Pengaturan halaman utama disimpan.', 'success');
+    } catch {
+      Swal.fire('Gagal!', 'Terjadi kesalahan.', 'error');
+    }
+    setIsSaving(false);
+  };
+
+  const handleFileUploadLocal = async (event: React.ChangeEvent<HTMLInputElement>, key: keyof HomepageSettings | string) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadProgress(prev => ({ ...prev, [key]: true }));
+    try {
+      const url = await uploadAndCompressImage(file, 'settings');
+      if(key.startsWith('awardImage-')) {
+         const idx = parseInt(key.split('-')[1]);
+         const newImages = [...(localSettings?.awardImages || [])];
+         newImages[idx] = url;
+         setLocalSettings(prev => prev ? ({ ...prev, awardImages: newImages }) : prev);
+      } else {
+         setLocalSettings(prev => prev ? ({ ...prev, [key]: url }) : prev);
+      }
+    } catch {
+      Swal.fire('Gagal!', 'Upload gagal.', 'error');
+    } finally {
+      setUploadProgress(prev => ({ ...prev, [key]: false }));
+      event.target.value = '';
+    }
+  };
+
+  const updateArrayItem = (key: 'education' | 'experience' | 'awards', index: number, field: string, value: any) => {
+    if (!localSettings) return;
+    const newArray = [...(localSettings[key] as any[])];
+    newArray[index] = { ...newArray[index], [field]: value };
+    setLocalSettings({ ...localSettings, [key]: newArray });
+  };
+
+  const addArrayItem = (key: 'education' | 'experience' | 'awards', emptyObj: any) => {
+    if (!localSettings) return;
+    setLocalSettings({ ...localSettings, [key]: [...(localSettings[key] as any[]) || [], emptyObj] });
+  };
+
+  const removeArrayItem = (key: 'education' | 'experience' | 'awards', index: number) => {
+    if (!localSettings) return;
+    const newArray = [...(localSettings[key] as any[])];
+    newArray.splice(index, 1);
+    setLocalSettings({ ...localSettings, [key]: newArray });
+  };
+
+  if (loading || !localSettings) return <div className="p-8 text-center text-on-surface-variant text-sm font-bold animate-pulse">Loading settings...</div>;
+
+  return (
+    <div className="bg-surface-container-lowest p-8 md:p-10 rounded-[2rem] shadow-sm border border-outline-variant/10">
+      <h2 className="text-2xl font-black text-on-surface mb-8 flex items-center gap-3 border-b border-outline-variant/10 pb-6">
+        <Settings size={28} className="text-primary" />
+        Customize Halaman Utama
+      </h2>
+
+      <form onSubmit={handleSave} className="space-y-10">
+        
+        {/* HERO SECTION */}
+        <div>
+          <h3 className="text-sm font-black text-primary uppercase tracking-widest border-b border-outline-variant/10 pb-2 mb-4">Bagian Hero (Atas)</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Tagline</label>
+              <input type="text" value={localSettings.heroTag} onChange={e => setLocalSettings({...localSettings, heroTag: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" required />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Judul Besar</label>
+              <input type="text" value={localSettings.heroTitle} onChange={e => setLocalSettings({...localSettings, heroTitle: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" required />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Deskripsi Utama</label>
+              <textarea rows={3} value={localSettings.heroDesc} onChange={e => setLocalSettings({...localSettings, heroDesc: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm resize-none" required />
+            </div>
+            <div>
+               <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Foto Hero</label>
+               <div className="flex gap-4 items-center">
+                 {localSettings.heroImage && <img src={parseImageUrl(localSettings.heroImage)} className="w-20 h-20 rounded-xl object-cover" />}
+                 <label className="relative flex items-center justify-center bg-primary/10 text-primary px-4 py-3 rounded-xl cursor-pointer hover:bg-primary hover:text-on-primary transition-colors text-sm font-bold">
+                    {uploadProgress['heroImage'] ? <Loader2 size={16} className="animate-spin" /> : 'Ganti Foto'}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUploadLocal(e, 'heroImage')} disabled={uploadProgress['heroImage']} />
+                 </label>
+                 <input type="url" value={localSettings.heroImage} onChange={e => setLocalSettings({...localSettings, heroImage: e.target.value})} className="flex-1 bg-surface-container px-4 py-2.5 rounded-xl text-sm" placeholder="Atau paste URL" />
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ABOUT SECTION */}
+        <div>
+          <h3 className="text-sm font-black text-primary uppercase tracking-widest border-b border-outline-variant/10 pb-2 mb-4">Bagian Tentang Saya</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Teks Visi Pribadi</label>
+              <textarea rows={4} value={localSettings.aboutVision} onChange={e => setLocalSettings({...localSettings, aboutVision: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm resize-none" required />
+            </div>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Nama Lengkap & Gelar</label>
+                <input type="text" value={localSettings.aboutName} onChange={e => setLocalSettings({...localSettings, aboutName: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" required />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Jabatan / Pekerjaan (Singkat)</label>
+                <input type="text" value={localSettings.aboutJob} onChange={e => setLocalSettings({...localSettings, aboutJob: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" required />
+              </div>
+            </div>
+            <div>
+               <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Foto Profil (Kecil)</label>
+               <div className="flex gap-4 items-center">
+                 {localSettings.aboutImage && <img src={parseImageUrl(localSettings.aboutImage)} className="w-14 h-14 rounded-full object-cover" />}
+                 <label className="relative flex items-center justify-center bg-primary/10 text-primary px-4 py-3 rounded-xl cursor-pointer hover:bg-primary hover:text-on-primary transition-colors text-sm font-bold">
+                    {uploadProgress['aboutImage'] ? <Loader2 size={16} className="animate-spin" /> : 'Ganti Foto'}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUploadLocal(e, 'aboutImage')} disabled={uploadProgress['aboutImage']} />
+                 </label>
+                 <input type="url" value={localSettings.aboutImage} onChange={e => setLocalSettings({...localSettings, aboutImage: e.target.value})} className="flex-1 bg-surface-container px-4 py-2.5 rounded-xl text-sm" placeholder="Atau paste URL" />
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* STATS SECTION */}
+        <div>
+          <h3 className="text-sm font-black text-primary uppercase tracking-widest border-b border-outline-variant/10 pb-2 mb-4">Statistik & Angka Profil</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Tahun Mengajar</label>
+              <input type="text" value={localSettings.statYears || ''} onChange={e => setLocalSettings({...localSettings, statYears: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" required />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Peserta Pelatihan</label>
+              <input type="text" value={localSettings.statTrainees || ''} onChange={e => setLocalSettings({...localSettings, statTrainees: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" required />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Proyek Digital</label>
+              <input type="text" value={localSettings.statProjects || ''} onChange={e => setLocalSettings({...localSettings, statProjects: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" required />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Pelatihan & Workshop</label>
+              <input type="text" value={localSettings.statWorkshops || ''} onChange={e => setLocalSettings({...localSettings, statWorkshops: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" required />
+            </div>
+          </div>
+        </div>
+
+        {/* EDUCATION SECTION */}
+        <div>
+          <div className="flex justify-between items-center border-b border-outline-variant/10 pb-2 mb-4">
+             <h3 className="text-sm font-black text-primary uppercase tracking-widest">Riwayat Pendidikan</h3>
+             <button type="button" onClick={() => addArrayItem('education', { year: '', title: '', major: '', institution: '' })} className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-bold hover:bg-primary/20">+ Tambah</button>
+          </div>
+          <div className="space-y-4">
+             {(localSettings.education || []).map((edu, idx) => (
+                <div key={idx} className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 relative flex flex-col gap-3">
+                   <button type="button" onClick={() => removeArrayItem('education', idx)} className="absolute top-3 right-3 text-error hover:bg-error/10 p-1.5 rounded-md"><Trash2 size={14} /></button>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-8">
+                      <div>
+                         <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Tahun</label>
+                         <input type="text" value={edu.year} onChange={e => updateArrayItem('education', idx, 'year', e.target.value)} className="w-full bg-surface-container px-3 py-2 rounded-lg text-sm" placeholder="Contoh: 2021 - 2023" />
+                      </div>
+                      <div>
+                         <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Gelar / Tingkat</label>
+                         <input type="text" value={edu.title} onChange={e => updateArrayItem('education', idx, 'title', e.target.value)} className="w-full bg-surface-container px-3 py-2 rounded-lg text-sm" placeholder="Contoh: S2 - Magister Pendidikan" />
+                      </div>
+                      <div>
+                         <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Jurusan (Opsional)</label>
+                         <input type="text" value={edu.major} onChange={e => updateArrayItem('education', idx, 'major', e.target.value)} className="w-full bg-surface-container px-3 py-2 rounded-lg text-sm" placeholder="Contoh: Pendidikan Teknik..." />
+                      </div>
+                      <div>
+                         <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Institusi / Universitas</label>
+                         <input type="text" value={edu.institution} onChange={e => updateArrayItem('education', idx, 'institution', e.target.value)} className="w-full bg-surface-container px-3 py-2 rounded-lg text-sm" placeholder="Contoh: Universitas Negeri Makassar" />
+                      </div>
+                   </div>
+                </div>
+             ))}
+          </div>
+        </div>
+
+        {/* EXPERIENCE SECTION */}
+        <div>
+          <div className="flex justify-between items-center border-b border-outline-variant/10 pb-2 mb-4">
+             <h3 className="text-sm font-black text-secondary uppercase tracking-widest">Pengalaman Profesional</h3>
+             <button type="button" onClick={() => addArrayItem('experience', { year: '', title: '', institution: '' })} className="text-xs bg-secondary/10 text-secondary px-3 py-1.5 rounded-lg font-bold hover:bg-secondary/20">+ Tambah</button>
+          </div>
+          <div className="space-y-4">
+             {(localSettings.experience || []).map((exp, idx) => (
+                <div key={idx} className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 relative flex flex-col gap-3">
+                   <button type="button" onClick={() => removeArrayItem('experience', idx)} className="absolute top-3 right-3 text-error hover:bg-error/10 p-1.5 rounded-md"><Trash2 size={14} /></button>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pr-8">
+                      <div>
+                         <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Tahun</label>
+                         <input type="text" value={exp.year} onChange={e => updateArrayItem('experience', idx, 'year', e.target.value)} className="w-full bg-surface-container px-3 py-2 rounded-lg text-sm" placeholder="Contoh: 2019 — Sekarang" />
+                      </div>
+                      <div>
+                         <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Posisi / Pekerjaan</label>
+                         <input type="text" value={exp.title} onChange={e => updateArrayItem('experience', idx, 'title', e.target.value)} className="w-full bg-surface-container px-3 py-2 rounded-lg text-sm" placeholder="Contoh: Guru Informatika" />
+                      </div>
+                      <div>
+                         <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Institusi / Tempat</label>
+                         <input type="text" value={exp.institution} onChange={e => updateArrayItem('experience', idx, 'institution', e.target.value)} className="w-full bg-surface-container px-3 py-2 rounded-lg text-sm" placeholder="Contoh: UPTD SMPN 6 Moncongloe" />
+                      </div>
+                   </div>
+                </div>
+             ))}
+          </div>
+        </div>
+
+        {/* AWARDS SECTION */}
+        <div>
+          <div className="flex justify-between items-center border-b border-outline-variant/10 pb-2 mb-4">
+             <h3 className="text-sm font-black text-primary uppercase tracking-widest">Tugas Tambahan & Penghargaan</h3>
+             <button type="button" onClick={() => addArrayItem('awards', { title: '', subtitle: '', highlight: false })} className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-bold hover:bg-primary/20">+ Tambah</button>
+          </div>
+          <div className="space-y-4">
+             {(localSettings.awards || []).map((award, idx) => (
+                <div key={idx} className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 relative flex flex-col gap-3">
+                   <button type="button" onClick={() => removeArrayItem('awards', idx)} className="absolute top-3 right-3 text-error hover:bg-error/10 p-1.5 rounded-md"><Trash2 size={14} /></button>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-8">
+                      <div>
+                         <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Judul / Peran</label>
+                         <input type="text" value={award.title} onChange={e => updateArrayItem('awards', idx, 'title', e.target.value)} className="w-full bg-surface-container px-3 py-2 rounded-lg text-sm" placeholder="Contoh: Duta Teknologi" />
+                      </div>
+                      <div>
+                         <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Instansi & Tahun (Subtitle)</label>
+                         <input type="text" value={award.subtitle} onChange={e => updateArrayItem('awards', idx, 'subtitle', e.target.value)} className="w-full bg-surface-container px-3 py-2 rounded-lg text-sm" placeholder="Contoh: Tahun 2022 | Kemendikbudristek" />
+                      </div>
+                      <div className="md:col-span-2 flex items-center gap-2 mt-1">
+                         <input type="checkbox" id={`hl-${idx}`} checked={award.highlight} onChange={e => updateArrayItem('awards', idx, 'highlight', e.target.checked)} className="w-4 h-4 text-primary rounded border-outline-variant/30" />
+                         <label htmlFor={`hl-${idx}`} className="text-xs font-bold text-on-surface-variant cursor-pointer">Highlight Biru Utama?</label>
+                      </div>
+                   </div>
+                </div>
+             ))}
+
+             {/* Award Images (Max 4) */}
+             <div className="pt-4 border-t border-outline-variant/10">
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Foto Kegitan Tugas Tambahan (Maksimal 4 Foto)</label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[0, 1, 2, 3].map((idx) => {
+                     const imgSrc = localSettings.awardImages?.[idx];
+                     return (
+                        <div key={idx} className="relative aspect-square border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center bg-surface hover:bg-surface-container-low transition-colors overflow-hidden group">
+                           {imgSrc ? (
+                              <img src={parseImageUrl(imgSrc)} className="w-full h-full object-cover" />
+                           ) : (
+                              <div className="text-center p-2 text-on-surface-variant opacity-50"><ImageIcon size={24} className="mx-auto mb-1" /><span className="text-[10px] font-bold uppercase">Kosong</span></div>
+                           )}
+                           
+                           <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white font-bold text-xs backdrop-blur-sm">
+                              {uploadProgress[`awardImage-${idx}`] ? <Loader2 size={16} className="animate-spin" /> : (imgSrc ? 'Ganti Foto' : 'Upload Foto')}
+                              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUploadLocal(e, `awardImage-${idx}`)} disabled={uploadProgress[`awardImage-${idx}`]} />
+                           </label>
+                        </div>
+                     )
+                  })}
+                </div>
+             </div>
+          </div>
+        </div>
+
+        <button 
+          type="submit"
+          className="w-full bg-primary text-on-primary py-4 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+          disabled={isSaving}
+        >
+          {isSaving ? <Loader2 size={18} className="animate-spin" /> : 'Simpan Perubahan Publik'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
 export default function Admin() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -37,9 +327,11 @@ export default function Admin() {
   const [link, setLink] = useState('');
   const [type, setType] = useState<'free' | 'paid'>('free');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: boolean }>({});
   
-  // Tab state: 'dashboard' | 'form'
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'form'>('dashboard');
+  // Tab state: 'dashboard' | 'form' | 'customize'
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'form' | 'customize'>('dashboard');
 
   const ADMIN_EMAIL = "kpbgalimka@gmail.com";
 
@@ -119,6 +411,28 @@ export default function Admin() {
 
   const handleLogout = () => {
     signOut(auth);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void, id: string) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadProgress(prev => ({ ...prev, [id]: true }));
+    try {
+      const url = await uploadAndCompressImage(file, 'projects');
+      setter(url);
+    } catch (error) {
+       Swal.fire({
+          title: 'Gagal!',
+          text: 'Terjadi kesalahan saat mengupload gambar.',
+          icon: 'error',
+          confirmButtonText: 'Tutup'
+        });
+    } finally {
+      setUploadProgress(prev => ({ ...prev, [id]: false }));
+      // reset input
+      event.target.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -354,10 +668,20 @@ export default function Admin() {
           >
             <PlusCircle size={20} /> Tambah Proyek
           </button>
+          <button 
+            onClick={() => setActiveTab('customize')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+              activeTab === 'customize' ? 'bg-primary text-on-primary shadow-md' : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
+            }`}
+          >
+            <Settings size={20} /> Customize Info
+          </button>
         </aside>
 
         {/* Dynamic Content */}
         <main className="flex-grow">
+          {activeTab === 'customize' && <CustomizePanel />}
+          
           {activeTab === 'form' && (
             <div className="bg-surface-container-lowest p-8 md:p-10 rounded-[2rem] shadow-sm border border-outline-variant/10">
               <h2 className="text-2xl font-black text-on-surface mb-8 flex items-center gap-3 border-b border-outline-variant/10 pb-6">
@@ -412,16 +736,22 @@ export default function Admin() {
 
               <div>
                 <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Link Gambar Utama (URL) <span className="text-error">*</span></label>
-                <div className="relative">
-                  <ImageIcon size={18} className="absolute left-4 top-3.5 text-on-surface-variant/50" />
-                  <input 
-                    type="url" 
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(parseImageUrl(e.target.value))}
-                    required
-                    className="w-full bg-surface-container pl-12 pr-4 py-3.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder="https://drive.google.com/..."
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-grow">
+                    <ImageIcon size={18} className="absolute left-4 top-3.5 text-on-surface-variant/50" />
+                    <input 
+                      type="url" 
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(parseImageUrl(e.target.value))}
+                      required
+                      className="w-full bg-surface-container pl-12 pr-4 py-3.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      placeholder="Atau Upload Foto ->"
+                    />
+                  </div>
+                  <label className="relative flex items-center justify-center bg-primary/10 text-primary px-4 py-3.5 rounded-xl cursor-pointer hover:bg-primary hover:text-on-primary transition-colors cursor-pointer w-auto whitespace-nowrap">
+                    {uploadProgress['main'] ? <Loader2 size={18} className="animate-spin" /> : <><Upload size={18} className="mr-2"/> Upload</>}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, setImageUrl, 'main')} disabled={uploadProgress['main']} />
+                  </label>
                 </div>
                 {imageUrl && (
                    <img src={imageUrl} alt="Preview" className="mt-4 h-24 rounded-lg object-cover border border-outline-variant/20" referrerPolicy="no-referrer" />
@@ -453,6 +783,14 @@ export default function Admin() {
                               placeholder="URL foto pendukung..."
                             />
                           </div>
+                          <label className="relative flex items-center justify-center bg-primary/10 text-primary px-4 py-3.5 rounded-xl cursor-pointer hover:bg-primary hover:text-on-primary transition-colors cursor-pointer">
+                            {uploadProgress[`support_${index}`] ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18}/>}
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, (newUrl) => {
+                               const newUrls = [...supportUrls];
+                               newUrls[index] = newUrl;
+                               setSupportUrls(newUrls);
+                            }, `support_${index}`)} disabled={uploadProgress[`support_${index}`]} />
+                          </label>
                           {supportUrls.length > 1 && (
                             <button type="button" onClick={() => setSupportUrls(supportUrls.filter((_, i) => i !== index))} className="p-3.5 bg-error/10 text-error rounded-xl hover:bg-error/20 transition-colors">
                               <Trash size={18} />
