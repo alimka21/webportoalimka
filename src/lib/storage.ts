@@ -14,8 +14,8 @@ export const uploadAndCompressImage = async (file: File, path: string = 'img'): 
     // Compress the file
     const compressedFile = await imageCompression(file, options);
     
-    // Check for Cloudinary settings
-    const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
+    // Check for Cloudinary settings from the correct document
+    const settingsDoc = await getDoc(doc(db, 'settings', 'homepage'));
     const settings = settingsDoc.data();
     
     if (settings && settings.cloudinaryCloudName && settings.cloudinaryUploadPreset) {
@@ -30,7 +30,8 @@ export const uploadAndCompressImage = async (file: File, path: string = 'img'): 
        });
 
        if (!response.ok) {
-          throw new Error('Cloudinary upload failed.');
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(`Cloudinary Error: ${errData?.error?.message || 'Upload failed.'}`);
        }
        const data = await response.json();
        return data.secure_url;
