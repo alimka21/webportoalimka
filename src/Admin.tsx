@@ -20,6 +20,7 @@ interface Project {
   imageUrl: string;
   link: string;
   type: 'free' | 'paid';
+  isFeatured?: boolean;
   createdAt: any;
   authorUid: string;
 }
@@ -300,6 +301,24 @@ const CustomizePanel = () => {
           </div>
         </div>
 
+        {/* CLOUDINARY CONFIG SECTION */}
+        <div>
+          <h3 className="text-sm font-black text-secondary uppercase tracking-widest border-b border-outline-variant/10 pb-2 mb-4">Pengaturan Upload Gambar Otomatis (Opsional)</h3>
+          <p className="text-xs text-on-surface-variant mb-4">
+            Untuk menggunakan <a href="https://cloudinary.com/users/register_free" target="_blank" rel="noreferrer" className="text-primary hover:underline">Cloudinary (Gratis & 100% Bebas Kuota)</a> daripada Firebase. Cukup daftarkan diri Anda, buat "Upload Preset" dengan pengaturan *"Unsigned"*.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Cloud Name</label>
+              <input type="text" value={localSettings.cloudinaryCloudName || ''} onChange={e => setLocalSettings({...localSettings, cloudinaryCloudName: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" placeholder="Contoh: dpvxxx" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Upload Preset (Mode: Unsigned)</label>
+              <input type="text" value={localSettings.cloudinaryUploadPreset || ''} onChange={e => setLocalSettings({...localSettings, cloudinaryUploadPreset: e.target.value})} className="w-full bg-surface-container px-4 py-2.5 rounded-xl text-sm" placeholder="Contoh: preset_portofolio" />
+            </div>
+          </div>
+        </div>
+
         <button 
           type="submit"
           className="w-full bg-primary text-on-primary py-4 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
@@ -326,6 +345,7 @@ export default function Admin() {
   const [imageUrl, setImageUrl] = useState('');
   const [link, setLink] = useState('');
   const [type, setType] = useState<'free' | 'paid'>('free');
+  const [isFeatured, setIsFeatured] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: boolean }>({});
@@ -447,6 +467,7 @@ export default function Admin() {
       image_url: parseImageUrl(imageUrl),
       link,
       type,
+      is_featured: isFeatured,
       author_uid: user.uid,
     };
 
@@ -458,6 +479,7 @@ export default function Admin() {
       imageUrl: parseImageUrl(imageUrl),
       link,
       type,
+      isFeatured,
       authorUid: user.uid,
     };
 
@@ -514,6 +536,7 @@ export default function Admin() {
       setImageUrl('');
       setLink('');
       setType('free');
+      setIsFeatured(false);
       setActiveTab('dashboard');
     } catch (error) {
       console.error("Error saving project:", error);
@@ -534,6 +557,7 @@ export default function Admin() {
     setImageUrl(project.imageUrl);
     setLink(project.link);
     setType(project.type);
+    setIsFeatured(project.isFeatured || false);
     setEditingId(project.id);
     setActiveTab('form');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -573,6 +597,55 @@ export default function Admin() {
         Swal.fire({
           title: 'Gagal!',
           text: 'Terjadi kesalahan saat menghapus proyek.',
+          icon: 'error'
+        });
+      }
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const result = await Swal.fire({
+      title: 'HAPUS SEMUA PROYEK?',
+      text: "Tindakan ini sangat berbahaya! Semua proyek Anda (bahkan yang di Firebase dan Supabase) akan dihapus secara permanen dan tidak dapat dikembalikan!",
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'SAYA YAKIN, HAPUS SEMUA!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // Delete all projects visually by deleting one by one
+        // Wait, for Supabase we can do a bulk delete, but for firebase we need to delete docs individually
+        
+        // 1. Delete from Supabase bulk
+        const { error: supabaseError } = await supabase
+          .from('projects')
+          .delete()
+          .neq('id', 'dummy'); // Deletes all
+
+        if (supabaseError) {
+          console.warn("Supabase delete all failed:", supabaseError);
+        }
+
+        // 2. Delete from Firebase bulk
+        for (const project of projects) {
+           await deleteDoc(doc(db, 'projects', project.id));
+        }
+
+        Swal.fire({
+          title: 'Dihapus!',
+          text: 'Semua proyek telah dikosongkan.',
+          icon: 'success',
+          timer: 2000
+        });
+      } catch (error) {
+        console.error("Error deleting all projects:", error);
+        Swal.fire({
+          title: 'Gagal!',
+          text: 'Terjadi kesalahan saat menghapus semua proyek.',
           icon: 'error'
         });
       }
@@ -735,70 +808,76 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Link Gambar Utama (URL) <span className="text-error">*</span></label>
-                <div className="flex gap-2">
-                  <div className="relative flex-grow">
-                    <ImageIcon size={18} className="absolute left-4 top-3.5 text-on-surface-variant/50" />
-                    <input 
-                      type="url" 
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(parseImageUrl(e.target.value))}
-                      required
-                      className="w-full bg-surface-container pl-12 pr-4 py-3.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      placeholder="Atau Upload Foto ->"
-                    />
-                  </div>
-                  <label className="relative flex items-center justify-center bg-primary/10 text-primary px-4 py-3.5 rounded-xl cursor-pointer hover:bg-primary hover:text-on-primary transition-colors cursor-pointer w-auto whitespace-nowrap">
-                    {uploadProgress['main'] ? <Loader2 size={18} className="animate-spin" /> : <><Upload size={18} className="mr-2"/> Upload</>}
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, setImageUrl, 'main')} disabled={uploadProgress['main']} />
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Unggah Foto Utama <span className="text-error">*</span></label>
+                <div className="flex flex-col gap-4">
+                  <label className={`relative flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-2xl cursor-pointer transition-colors ${imageUrl ? 'border-primary/50 bg-primary/5' : 'border-outline-variant/30 bg-surface-container hover:bg-surface-container-high'}`}>
+                    {uploadProgress['main'] ? (
+                      <div className="flex flex-col items-center text-primary">
+                        <Loader2 size={32} className="animate-spin mb-2" />
+                        <span className="text-sm font-bold">Mengunggah...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload size={32} className="text-on-surface-variant/50 mb-2"/>
+                        <span className="text-sm font-bold text-on-surface">Pilih file gambar dari komputer</span>
+                        <span className="text-xs text-on-surface-variant mt-1">JPG, PNG (Maks 1MB)</span>
+                        <input type="file" accept="image/*" className="hidden" required={!imageUrl && !editingId} onChange={(e) => handleFileUpload(e, setImageUrl, 'main')} disabled={uploadProgress['main']} />
+                      </>
+                    )}
                   </label>
+                  {imageUrl && (
+                    <div className="relative inline-block w-fit">
+                      <img src={imageUrl} alt="Preview" className="h-40 w-auto rounded-xl object-cover border border-outline-variant/20 shadow-sm" referrerPolicy="no-referrer" />
+                    </div>
+                  )}
                 </div>
-                {imageUrl && (
-                   <img src={imageUrl} alt="Preview" className="mt-4 h-24 rounded-lg object-cover border border-outline-variant/20" referrerPolicy="no-referrer" />
-                )}
               </div>
 
               <div>
                  <div className="flex justify-between items-end mb-2">
-                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider">Link Foto Pendukung (Opsional)</label>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider">Unggah Foto Pendukung (Opsional)</label>
                     <button type="button" onClick={() => setSupportUrls([...supportUrls, ''])} className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
                       <Plus size={12} /> Tambah Foto
                     </button>
                  </div>
-                 <div className="space-y-3">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                    {supportUrls.map((url, index) => (
-                      <div key={index} className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                          <div className="relative flex-grow">
-                            <ImageIcon size={18} className="absolute left-4 top-3.5 text-on-surface-variant/50" />
-                            <input 
-                              type="url" 
-                              value={url}
-                              onChange={(e) => {
-                                const newUrls = [...supportUrls];
-                                newUrls[index] = parseImageUrl(e.target.value);
-                                setSupportUrls(newUrls);
-                              }}
-                              className="w-full bg-surface-container pl-12 pr-4 py-3.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
-                              placeholder="URL foto pendukung..."
-                            />
-                          </div>
-                          <label className="relative flex items-center justify-center bg-primary/10 text-primary px-4 py-3.5 rounded-xl cursor-pointer hover:bg-primary hover:text-on-primary transition-colors cursor-pointer">
-                            {uploadProgress[`support_${index}`] ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18}/>}
-                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, (newUrl) => {
-                               const newUrls = [...supportUrls];
-                               newUrls[index] = newUrl;
-                               setSupportUrls(newUrls);
-                            }, `support_${index}`)} disabled={uploadProgress[`support_${index}`]} />
-                          </label>
-                          {supportUrls.length > 1 && (
-                            <button type="button" onClick={() => setSupportUrls(supportUrls.filter((_, i) => i !== index))} className="p-3.5 bg-error/10 text-error rounded-xl hover:bg-error/20 transition-colors">
-                              <Trash size={18} />
-                            </button>
+                      <div key={index} className="relative group">
+                        <label className={`relative flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-2xl cursor-pointer transition-colors overflow-hidden ${url ? 'border-primary/30 border-solid' : 'border-outline-variant/30 bg-surface-container hover:bg-surface-container-high'}`}>
+                          {uploadProgress[`support_${index}`] ? (
+                            <Loader2 size={24} className="animate-spin text-primary" />
+                          ) : url ? (
+                            <>
+                               <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                 <span className="text-white text-xs font-bold flex items-center gap-1"><Edit2 size={14} /> Ganti</span>
+                               </div>
+                               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, (newUrl) => {
+                                 const newUrls = [...supportUrls];
+                                 newUrls[index] = newUrl;
+                                 setSupportUrls(newUrls);
+                               }, `support_${index}`)} disabled={uploadProgress[`support_${index}`]} />
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={24} className="text-on-surface-variant/50 mb-1"/>
+                              <span className="text-xs font-bold text-on-surface text-center px-2">Pilih File</span>
+                               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, (newUrl) => {
+                                 const newUrls = [...supportUrls];
+                                 newUrls[index] = newUrl;
+                                 setSupportUrls(newUrls);
+                               }, `support_${index}`)} disabled={uploadProgress[`support_${index}`]} />
+                            </>
                           )}
-                        </div>
-                        {url && (
-                           <img src={url} alt="Preview Support" className="h-20 w-32 rounded-lg object-cover border border-outline-variant/20" referrerPolicy="no-referrer" />
+                        </label>
+                        {supportUrls.length > 1 && (
+                          <button 
+                            type="button" 
+                            onClick={(_) => setSupportUrls(supportUrls.filter((_, i) => i !== index))} 
+                            className="absolute -top-2 -right-2 bg-error text-on-error p-1.5 rounded-full shadow-md hover:bg-error/90 transition-colors z-10"
+                          >
+                            <X size={14} />
+                          </button>
                         )}
                       </div>
                    ))}
@@ -830,9 +909,22 @@ export default function Admin() {
                     className="w-full bg-surface-container pl-10 pr-4 py-2.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
                   >
                     <option value="free">Gratis (Free)</option>
-                    <option value="paid">Berbayar (Paid)</option>
+                    <option value="paid">Eksklusif / Berbayar (Paid)</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 flex items-center justify-between mt-4">
+                <div>
+                  <label className="block text-sm font-bold text-on-surface">Tampilkan di Beranda (Showcase)</label>
+                  <p className="text-xs text-on-surface-variant mt-0.5">Beri centang jika proyek ini ingin ditampilkan di halaman utama web (maks 6 disarankan).</p>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={isFeatured}
+                  onChange={(e) => setIsFeatured(e.target.checked)}
+                  className="w-6 h-6 rounded border-outline-variant/30 text-primary focus:ring-primary"
+                />
               </div>
 
               <div className="pt-8 flex gap-4 border-t border-outline-variant/10">
@@ -868,14 +960,24 @@ export default function Admin() {
 
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              <div className="flex justify-between items-end mb-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-6 gap-4">
                 <h2 className="text-2xl font-black text-on-surface">Dashboard Proyek ({projects.length})</h2>
-                <button 
-                  onClick={() => setActiveTab('form')}
-                  className="hidden md:flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary/20 transition-colors"
-                >
-                  <Plus size={16} /> Buat Baru
-                </button>
+                <div className="flex gap-3">
+                  {projects.length > 0 && (
+                    <button 
+                      onClick={handleDeleteAll}
+                      className="flex items-center gap-2 bg-error/10 text-error px-4 py-2 rounded-xl text-sm font-bold hover:bg-error/20 transition-colors border border-error/20"
+                    >
+                      <Trash size={16} /> Kosongkan Semua
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setActiveTab('form')}
+                    className="hidden md:flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary/20 transition-colors"
+                  >
+                    <Plus size={16} /> Buat Baru
+                  </button>
+                </div>
               </div>
               
               {projects.length === 0 ? (

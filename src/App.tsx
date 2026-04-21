@@ -16,7 +16,8 @@ import {
   Facebook,
   Youtube,
   Menu,
-  X
+  X,
+  Star
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -500,13 +501,9 @@ const ProjectCard = ({ project, index }: { project: any, index: number, key?: st
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className={`rounded-2xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl ${
-        isPaid 
-          ? 'bg-surface-container-lowest border border-outline-variant/30 relative rotate-[-1deg] hover:rotate-0 transition-transform duration-300 before:absolute before:inset-0 before:bg-[url("https://www.transparenttextures.com/patterns/white-paper.png")] before:opacity-10 before:z-0 shadow-[0_4px_20px_rgb(0,0,0,0.05)]' 
-          : 'bg-surface-container-lowest border border-outline-variant/10'
-      }`}
+      className={`rounded-2xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl bg-surface-container-lowest border border-outline-variant/10`}
     >
-      <div className="aspect-video overflow-hidden relative z-10">
+      <div className="aspect-video overflow-hidden relative z-10 bg-surface-container">
         <img 
           src={project.imageUrl} 
           alt={project.title} 
@@ -516,10 +513,13 @@ const ProjectCard = ({ project, index }: { project: any, index: number, key?: st
             (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
           }}
         />
-        {/* Icons removed per user request */}
+        {isPaid && (
+          <div className="absolute top-4 right-4 bg-primary text-on-primary p-2.5 rounded-full shadow-lg z-20" title="Proyek Eksklusif">
+            <Star size={18} fill="currentColor" />
+          </div>
+        )}
       </div>
       <div className="p-8 flex flex-col flex-grow relative z-10 bg-surface-container-lowest/90 backdrop-blur-sm">
-        {/* Decorative line */}
         <div className={`absolute top-0 left-8 w-12 h-1 rounded-b-full ${isPaid ? 'bg-primary' : 'bg-secondary'}`}></div>
         
         <h4 className={`text-xl font-bold mb-3 line-clamp-2 mt-2 transition-colors ${
@@ -527,7 +527,6 @@ const ProjectCard = ({ project, index }: { project: any, index: number, key?: st
         }`}>{project.title}</h4>
         <p className="text-on-surface-variant text-sm mb-4 flex-grow leading-relaxed">{project.description}</p>
         
-        {/* Detail buttons hidden on homepage as requested */}
       </div>
       <Link to={`/projects/${project.id}`} className="absolute inset-0 z-20">
         <span className="sr-only">Lihat Project {project.title}</span>
@@ -562,8 +561,7 @@ const Projects = () => {
     return () => unsubscribe();
   }, []);
 
-  const paidProjects = projects.filter(p => p.type === 'paid');
-  const freeProjects = projects.filter(p => p.type === 'free');
+  const featuredProjects = projects.filter(p => p.isFeatured).slice(0, 6);
 
   return (
     <section id="projects" className="py-24 bg-surface">
@@ -573,7 +571,7 @@ const Projects = () => {
           <div className="h-1 w-20 bg-secondary"></div>
         </div>
         
-        {projects.length === 0 ? (
+        {featuredProjects.length === 0 ? (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -582,67 +580,13 @@ const Projects = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-surface-container mb-4 text-on-surface-variant/50">
               <span className="text-3xl font-black">?</span>
             </div>
-            <p className="text-on-surface-variant font-medium text-lg">Belum ada proyek yang ditambahkan.</p>
+            <p className="text-on-surface-variant font-medium text-lg">Belum ada proyek yang ditampilkan.</p>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8">
-            {/* Paid Projects Section */}
-            {(paidProjects.length > 0 || projects.length > 0) && (
-              <div className="bg-surface-container-lowest/40 rounded-3xl p-6 md:p-8 border border-outline-variant/10">
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className="flex flex-col items-center text-center mb-8"
-                >
-                  <div>
-                    <h3 className="text-2xl font-black text-on-surface mb-1">Eksklusif (Beli)</h3>
-                    <p className="text-sm text-on-surface-variant font-medium">Proyek berbayar premium untuk memaksimalkan potensi edukasi</p>
-                  </div>
-                </motion.div>
-                
-                {paidProjects.length === 0 ? (
-                  <div className="py-12 text-center border-2 border-dashed border-outline-variant/20 rounded-2xl">
-                    <p className="text-on-surface-variant text-sm">Belum ada proyek eksklusif</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-6">
-                    {paidProjects.slice(0, 3).map((project, index) => (
-                      <ProjectCard key={project.id} project={project} index={index} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Free Projects Section */}
-            {(freeProjects.length > 0 || projects.length > 0) && (
-              <div className="bg-surface-container-lowest/40 rounded-3xl p-6 md:p-8 border border-outline-variant/10 flex flex-col">
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className="flex flex-col items-center text-center mb-8"
-                >
-                  <div>
-                    <h3 className="text-2xl font-black text-on-surface mb-1">Gratis</h3>
-                    <p className="text-sm text-on-surface-variant font-medium">Akses langsung ke materi bernilai secara gratis</p>
-                  </div>
-                </motion.div>
-
-                {freeProjects.length === 0 ? (
-                  <div className="py-12 text-center border-2 border-dashed border-outline-variant/20 rounded-2xl mt-auto">
-                    <p className="text-on-surface-variant text-sm">Belum ada proyek gratis</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-6 flex-grow">
-                    {freeProjects.slice(0, 3).map((project, index) => (
-                      <ProjectCard key={project.id} project={project} index={index} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featuredProjects.map((project, index) => (
+              <ProjectCard key={project.id} project={project} index={index} />
+            ))}
           </div>
         )}
 

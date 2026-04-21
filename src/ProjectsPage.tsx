@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Search, Filter, ArrowRight } from "lucide-react";
+import { Search, ArrowRight, Star } from "lucide-react";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
-import { supabase } from './lib/supabase';
 import { parseImageUrl } from './lib/utils';
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
@@ -20,55 +19,22 @@ export default function ProjectsPage() {
     // Scroll to top on mount
     window.scrollTo(0, 0);
     
-    const fetchProjects = async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        console.error("Error fetching projects from Supabase: ", error);
-        // Fallback to Firebase
-        const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const projectsData = snapshot.docs.map(doc => {
-            const d = doc.data();
-            return {
-              id: doc.id,
-              ...d,
-              imageUrl: parseImageUrl(d.imageUrl),
-            };
-          });
-          setProjects(projectsData);
-        }, (err) => {
-          console.error("Error fetching projects from Firebase: ", err);
-        });
-        return () => unsubscribe();
-      } else {
-        const mappedData = data.map(p => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
-            imageUrl: parseImageUrl(p.image_url),
-            link: p.link,
-            type: p.type,
-            createdAt: p.created_at,
-            authorUid: p.author_uid
-        }));
-        setProjects(mappedData);
-      }
-    };
+    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const projectsData = snapshot.docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          ...d,
+          imageUrl: parseImageUrl(d.imageUrl),
+        };
+      });
+      setProjects(projectsData);
+    }, (err) => {
+      console.error("Error fetching projects from Firebase: ", err);
+    });
 
-    fetchProjects();
-
-    const channel = supabase
-      .channel('projects-page-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => fetchProjects())
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => unsubscribe();
   }, []);
 
   const filteredProjects = projects.filter(p => {
@@ -102,22 +68,22 @@ export default function ProjectsPage() {
             </div>
             
             {/* Filter */}
-            <div className="flex gap-2 p-1.5 bg-surface-container-lowest border border-outline-variant/20 rounded-xl w-full md:w-auto">
+            <div className="flex gap-2 p-1.5 bg-surface-container-lowest border border-outline-variant/20 rounded-xl w-full md:w-auto overflow-x-auto">
               <button 
                 onClick={() => setSearchParams({ type: 'all' })}
-                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${typeFilter === 'all' ? 'bg-surface-container-highest text-on-surface' : 'text-on-surface-variant hover:text-on-surface'}`}
+                className={`flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${typeFilter === 'all' ? 'bg-surface-container-highest text-on-surface' : 'text-on-surface-variant hover:text-on-surface'}`}
               >
                 Semua
               </button>
               <button 
                 onClick={() => setSearchParams({ type: 'paid' })}
-                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${typeFilter === 'paid' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                className={`flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${typeFilter === 'paid' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
               >
                 Eksklusif (Beli)
               </button>
               <button 
                 onClick={() => setSearchParams({ type: 'free' })}
-                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${typeFilter === 'free' ? 'bg-secondary text-on-secondary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                className={`flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${typeFilter === 'free' ? 'bg-secondary text-on-secondary' : 'text-on-surface-variant hover:text-on-surface'}`}
               >
                 Gratis
               </button>
@@ -144,11 +110,7 @@ export default function ProjectsPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: (index % 10) * 0.05 }}
-                  className={`rounded-2xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl ${
-                    isPaid 
-                      ? 'bg-surface-container-lowest border border-outline-variant/30 relative rotate-[-1deg] hover:rotate-0 transition-transform duration-300 before:absolute before:inset-0 before:bg-[url("https://www.transparenttextures.com/patterns/white-paper.png")] before:opacity-10 before:z-0 shadow-[0_4px_20px_rgb(0,0,0,0.05)]' 
-                      : 'bg-surface-container-lowest border border-outline-variant/10'
-                  }`}
+                  className={`rounded-2xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl bg-surface-container-lowest border border-outline-variant/10`}
                 >
                   <div className="aspect-video overflow-hidden relative z-10 bg-surface-container">
                     <img 
@@ -160,10 +122,15 @@ export default function ProjectsPage() {
                         (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
                       }}
                     />
+                    {isPaid && (
+                      <div className="absolute top-4 right-4 bg-primary text-on-primary p-2.5 rounded-full shadow-lg z-20" title="Proyek Eksklusif">
+                        <Star size={18} fill="currentColor" />
+                      </div>
+                    )}
                   </div>
                   <div className="p-8 flex flex-col flex-grow relative z-10 bg-surface-container-lowest/90 backdrop-blur-sm">
                     <h4 className={`text-xl font-bold mb-3 line-clamp-2 transition-colors ${
-                      isPaid ? 'text-primary' : 'text-on-surface'
+                      isPaid ? 'text-primary' : 'text-on-surface group-hover:text-primary'
                     }`}>{project.title}</h4>
                     <p className="text-on-surface-variant text-sm mb-4 flex-grow leading-relaxed">{project.description}</p>
                   </div>

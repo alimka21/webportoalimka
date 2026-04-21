@@ -69,12 +69,13 @@ service cloud.firestore {
     // ===============================================================
     
     function isValidProject(data) {
-      return hasOnlyAllowedFields(['title', 'description', 'promptText', 'supportUrls', 'imageUrl', 'link', 'type', 'createdAt', 'authorUid']) &&
+      return hasOnlyAllowedFields(['title', 'description', 'promptText', 'supportUrls', 'imageUrl', 'link', 'type', 'createdAt', 'authorUid', 'isFeatured']) &&
              validStringLength('title', 1, 100) &&
              validStringLength('description', 1, 1000) &&
              isValidUrl(data.imageUrl) &&
              isValidUrl(data.link) &&
              data.type in ['free', 'paid'] &&
+             (!('isFeatured' in data) || data.isFeatured is bool) &&
              data.createdAt is timestamp &&
              data.authorUid is string;
     }
