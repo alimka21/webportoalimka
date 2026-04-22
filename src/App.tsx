@@ -651,30 +651,55 @@ const InstagramGallery = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
-          {posts.map((post, index) => (
-            <motion.a 
-              key={index}
-              href={post.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-              className="relative aspect-[9/16] overflow-hidden rounded-2xl group cursor-pointer bg-surface-container shadow-sm hover:shadow-xl transition-shadow"
-            >
-              <img 
-                src={post.image} 
-                alt="Instagram Post" 
-                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
-            </motion.a>
-          ))}
+          {posts.map((post, index) => {
+            const getEmbedUrl = (url: string) => {
+              if (!url || typeof url !== 'string') return '';
+              try {
+                const parsed = new URL(url);
+                if (!parsed.hostname.includes('instagram.com')) return '';
+                let path = parsed.pathname.replace(/\/+$/, '');
+                if (!path.endsWith('/embed')) {
+                   return `${parsed.origin}${path}/embed`;
+                }
+                return url;
+              } catch {
+                return '';
+              }
+            };
+            const embedUrl = getEmbedUrl(post.url);
+            
+            if (!embedUrl) return null;
+
+            return (
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+                className="relative overflow-hidden rounded-2xl bg-surface-container shadow-sm hover:shadow-xl transition-shadow w-full h-[450px]"
+              >
+                <iframe 
+                  src={embedUrl}
+                  className="w-full h-full border-0 pointer-events-auto"
+                  scrolling="no"
+                  allowtransparency="true"
+                ></iframe>
+                {/* Invisible overlay for clickable area to open native Instagram optionally */}
+                <a 
+                   href={post.url} 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   className="absolute inset-0 z-10 pointer-events-none"
+                   aria-label="View on Instagram"
+                ></a>
+              </motion.div>
+            );
+          })}
         </div>
         
         <div className="mt-12 text-center">
-          <a href="https://instagram.com/alimkautama" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-surface text-on-surface hover:bg-surface-container-high border border-outline-variant/30 transition-colors px-6 py-3 rounded-xl font-bold text-sm tracking-wide">
+          <a href="https://www.instagram.com/muh.alimka/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-surface text-on-surface hover:bg-surface-container-high border border-outline-variant/30 transition-colors px-6 py-3 rounded-xl font-bold text-sm tracking-wide">
             Ikuti di Instagram <ExternalLink size={16} />
           </a>
         </div>
