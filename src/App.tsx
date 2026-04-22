@@ -630,28 +630,12 @@ const Projects = () => {
 };
 
 const InstagramGallery = () => {
-  const posts = [
-    {
-      id: 1,
-      image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=600&h=1067&auto=format&fit=crop",
-      url: "https://instagram.com"
-    },
-    {
-      id: 2,
-      image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=600&h=1067&auto=format&fit=crop",
-      url: "https://instagram.com"
-    },
-    {
-      id: 3,
-      image: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=600&h=1067&auto=format&fit=crop",
-      url: "https://instagram.com"
-    },
-    {
-      id: 4,
-      image: "https://images.unsplash.com/photo-1515542706656-8e6ef17a1521?q=80&w=600&h=1067&auto=format&fit=crop",
-      url: "https://instagram.com"
-    }
-  ];
+  const { settings, loading } = useHomepageSettings();
+  
+  if (loading) return null;
+  const posts = settings.instagramPosts || [];
+
+  if (posts.length === 0) return null;
 
   return (
     <section id="gallery" className="py-24 bg-surface-container-lowest">
@@ -669,7 +653,7 @@ const InstagramGallery = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
           {posts.map((post, index) => (
             <motion.a 
-              key={post.id}
+              key={index}
               href={post.url}
               target="_blank"
               rel="noopener noreferrer"

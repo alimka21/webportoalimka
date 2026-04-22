@@ -11,9 +11,6 @@ import { useHomepageSettings, HomepageSettings } from './hooks/useSettings';
 
 import { Footer } from './components/Footer';
 
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
-
 interface Project {
   id: string;
   title: string;
@@ -27,19 +24,6 @@ interface Project {
   createdAt: any;
   authorUid: string;
 }
-
-const quillModules = {
-  toolbar: [
-    [{ 'header': [3, false] }],
-    ['bold', 'italic', 'underline'],
-    ['clean']
-  ],
-};
-
-const quillFormats = [
-  'header',
-  'bold', 'italic', 'underline'
-];
 
 const CustomizePanel = () => {
   const { settings, loading } = useHomepageSettings();
@@ -315,6 +299,61 @@ const CustomizePanel = () => {
                   })}
                 </div>
              </div>
+          </div>
+        </div>
+
+        {/* INSTAGRAM GALLERY SECTION */}
+        <div>
+          <h3 className="text-sm font-black text-primary uppercase tracking-widest border-b border-outline-variant/10 pb-2 mb-4">Galeri Instagram (Beranda)</h3>
+          <p className="text-xs text-on-surface-variant mb-4">Upload hingga 4 gambar potret (9:16) dan masukkan tautan postingan aslinya untuk galeri instagram di beranda.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[0, 1, 2, 3].map((idx) => {
+               const post = localSettings.instagramPosts?.[idx] || { id: idx+1, url: 'https://instagram.com', image: '' };
+               return (
+                  <div key={idx} className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 flex flex-col gap-3">
+                     <div className="relative aspect-[9/16] border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center bg-surface hover:bg-surface-container-low transition-colors overflow-hidden group">
+                        {post.image ? (
+                           <img src={parseImageUrl(post.image)} className="w-full h-full object-cover" />
+                        ) : (
+                           <div className="text-center p-2 text-on-surface-variant opacity-50"><ImageIcon size={24} className="mx-auto mb-1" /><span className="text-[10px] font-bold uppercase">Foto {idx + 1}</span></div>
+                        )}
+                        <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white font-bold text-xs backdrop-blur-sm">
+                           {uploadProgress[`instagramImage-${idx}`] ? <Loader2 size={16} className="animate-spin" /> : (post.image ? 'Ganti Foto' : 'Upload Foto')}
+                           <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                             const file = e.target.files?.[0];
+                             if (!file) return;
+                             setUploadProgress(prev => ({ ...prev, [`instagramImage-${idx}`]: true }));
+                             uploadAndCompressImage(file, 'settings').then(url => {
+                               const newPosts = [...(localSettings.instagramPosts || [])];
+                               if(!newPosts[idx]) newPosts[idx] = { id: idx+1, url: 'https://instagram.com', image: '' };
+                               newPosts[idx].image = url;
+                               setLocalSettings({ ...localSettings, instagramPosts: newPosts });
+                             }).catch(() => {
+                               Swal.fire('Gagal', 'Upload foto galeri gagal', 'error');
+                             }).finally(() => {
+                               setUploadProgress(prev => ({ ...prev, [`instagramImage-${idx}`]: false }));
+                             });
+                           }} disabled={uploadProgress[`instagramImage-${idx}`]} />
+                        </label>
+                     </div>
+                     <div>
+                        <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">🔗 Link Postingan</label>
+                        <input 
+                           type="url" 
+                           value={post.url} 
+                           onChange={e => {
+                             const newPosts = [...(localSettings.instagramPosts || [])];
+                             if(!newPosts[idx]) newPosts[idx] = { id: idx+1, url: 'https://instagram.com', image: '' };
+                             newPosts[idx].url = e.target.value;
+                             setLocalSettings({ ...localSettings, instagramPosts: newPosts });
+                           }} 
+                           className="w-full bg-surface-container px-3 py-2 rounded-lg text-xs" 
+                           placeholder="https://instagram.com/p/..." 
+                        />
+                     </div>
+                  </div>
+               )
+            })}
           </div>
         </div>
 
@@ -862,16 +901,16 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Deskripsi Proyek</label>
-                <div className="bg-surface-container rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 admin-quill">
-                  <ReactQuill 
-                    theme="snow"
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Deskripsi Singkat Proyek</label>
+                <div className="relative">
+                  <FileText size={16} className="absolute left-3 top-3 text-on-surface-variant/50" />
+                  <textarea 
                     value={description}
-                    onChange={setDescription}
-                    modules={quillModules}
-                    formats={quillFormats}
-                    className="bg-surface-container text-on-surface"
-                    placeholder="Deskripsikan fitur dan detail proyek ini..."
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={4}
+                    required
+                    className="w-full bg-surface-container pl-10 pr-4 py-2.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
+                    placeholder="Deskripsikan fitur dan spesifikasi singkat proyek ini..."
                   />
                 </div>
               </div>
