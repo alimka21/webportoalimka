@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { supabase } from './lib/supabase';
 import { parseImageUrl } from './lib/utils';
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";

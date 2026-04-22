@@ -450,16 +450,22 @@ export default function Admin() {
 
     const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const projectsData = snapshot.docs.map(doc => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          ...d,
-          supportUrls: (d.supportUrls || []).map((url: string) => parseImageUrl(url)),
-          imageUrl: parseImageUrl(d.imageUrl),
-        };
-      }) as Project[];
-      setProjects(projectsData);
+      try {
+        const projectsData = snapshot.docs.map(doc => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            ...d,
+            supportUrls: Array.isArray(d.supportUrls) ? d.supportUrls.map((url: string) => parseImageUrl(url)) : [],
+            imageUrl: parseImageUrl(d.imageUrl),
+          };
+        }) as Project[];
+        setProjects(projectsData);
+      } catch (err) {
+        console.error("Error processing projects data:", err);
+      }
+    }, (error) => {
+       console.error("Error fetching projects snapshot Admin:", error);
     });
 
     return () => unsubscribe();
