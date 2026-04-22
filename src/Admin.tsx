@@ -448,56 +448,21 @@ export default function Admin() {
   useEffect(() => {
     if (!isAdmin) return;
 
-    const fetchProjects = async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        console.error("Error fetching projects from Supabase: ", error);
-        // Fallback to Firebase for admin
-        const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const projectsData = snapshot.docs.map(doc => {
-            const d = doc.data();
-            return {
-              id: doc.id,
-              ...d,
-              supportUrls: (d.supportUrls || []).map((url: string) => parseImageUrl(url)),
-              imageUrl: parseImageUrl(d.imageUrl),
-            };
-          }) as Project[];
-          setProjects(projectsData);
-        });
-        return () => unsubscribe();
-      } else {
-        const mappedData = data.map(p => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
-            promptText: p.prompt_text,
-            supportUrls: (p.support_urls || []).map((url: string) => parseImageUrl(url)),
-            imageUrl: parseImageUrl(p.image_url),
-            link: p.link,
-            type: p.type,
-            createdAt: p.created_at,
-            authorUid: p.author_uid
-        })) as Project[];
-        setProjects(mappedData);
-      }
-    };
+    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const projectsData = snapshot.docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          ...d,
+          supportUrls: (d.supportUrls || []).map((url: string) => parseImageUrl(url)),
+          imageUrl: parseImageUrl(d.imageUrl),
+        };
+      }) as Project[];
+      setProjects(projectsData);
+    });
 
-    fetchProjects();
-
-    const channel = supabase
-      .channel('admin-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => fetchProjects())
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => unsubscribe();
   }, [isAdmin]);
 
   const handleLogin = async () => {
@@ -562,18 +527,6 @@ export default function Admin() {
     e.preventDefault();
     if (!user) return;
 
-    const projectDataSupabase = {
-      title,
-      description,
-      prompt_text: promptText,
-      support_urls: supportUrls.filter(url => url.trim() !== '').map(url => parseImageUrl(url)),
-      image_url: parseImageUrl(imageUrl),
-      link,
-      type,
-      is_featured: isFeatured,
-      author_uid: user.uid,
-    };
-
     const projectDataFirebase = {
       title,
       description,
@@ -588,16 +541,7 @@ export default function Admin() {
 
     try {
       if (editingId) {
-        // Try Supabase first
-        const { error: supabaseError } = await supabase
-          .from('projects')
-          .update(projectDataSupabase)
-          .eq('id', editingId);
-
-        if (supabaseError) {
-          console.warn("Supabase update failed, trying Firebase fallback:", supabaseError);
-          await updateDoc(doc(db, 'projects', editingId), projectDataFirebase);
-        }
+        await updateDoc(doc(db, 'projects', editingId), projectDataFirebase);
         
         Swal.fire({
           title: 'Berhasil!',
@@ -609,18 +553,10 @@ export default function Admin() {
 
         setEditingId(null);
       } else {
-        // Try Supabase first
-        const { error: supabaseError } = await supabase
-          .from('projects')
-          .insert([projectDataSupabase]);
-
-        if (supabaseError) {
-          console.warn("Supabase insert failed, trying Firebase fallback:", supabaseError);
-          await addDoc(collection(db, 'projects'), {
-            ...projectDataFirebase,
-            createdAt: serverTimestamp(),
-          });
-        }
+        await addDoc(collection(db, 'projects'), {
+          ...projectDataFirebase,
+          createdAt: serverTimestamp(),
+        });
 
         Swal.fire({
           title: 'Berhasil!',
@@ -680,15 +616,7 @@ export default function Admin() {
 
     if (result.isConfirmed) {
       try {
-        const { error: supabaseError } = await supabase
-          .from('projects')
-          .delete()
-          .eq('id', id);
-
-        if (supabaseError) {
-          console.warn("Supabase delete failed, trying Firebase fallback:", supabaseError);
-          await deleteDoc(doc(db, 'projects', id));
-        }
+        await deleteDoc(doc(db, 'projects', id));
 
         Swal.fire(
           'Dihapus!',
@@ -720,20 +648,7 @@ export default function Admin() {
 
     if (result.isConfirmed) {
       try {
-        // Delete all projects visually by deleting one by one
-        // Wait, for Supabase we can do a bulk delete, but for firebase we need to delete docs individually
-        
-        // 1. Delete from Supabase bulk
-        const { error: supabaseError } = await supabase
-          .from('projects')
-          .delete()
-          .neq('id', 'dummy'); // Deletes all
-
-        if (supabaseError) {
-          console.warn("Supabase delete all failed:", supabaseError);
-        }
-
-        // 2. Delete from Firebase bulk
+        // Delete from Firebase bulk
         for (const project of projects) {
            await deleteDoc(doc(db, 'projects', project.id));
         }

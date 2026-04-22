@@ -29,10 +29,7 @@ export const Footer = () => {
       <div className="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto px-6 gap-6">
         <div className="flex flex-col items-center md:items-start text-center md:text-left">
           <p className="text-sm tracking-normal text-on-surface font-medium">
-            © {new Date().getFullYear()} Muhammad Alimka. Guru, Fasilitator, dan Inovator.
-          </p>
-          <p className="text-xs text-on-surface-variant/70 mt-1 uppercase tracking-widest font-bold">
-            All rights reserved.
+            © {new Date().getFullYear()} Muhammad Alimka - All rights reserved
           </p>
         </div>
         <div className="flex gap-6">
