@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   Star,
-  Share2
+  Share2,
+  ExternalLink
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -628,6 +629,76 @@ const Projects = () => {
   );
 };
 
+const InstagramGallery = () => {
+  const posts = [
+    {
+      id: 1,
+      image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=600&h=1067&auto=format&fit=crop",
+      url: "https://instagram.com"
+    },
+    {
+      id: 2,
+      image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=600&h=1067&auto=format&fit=crop",
+      url: "https://instagram.com"
+    },
+    {
+      id: 3,
+      image: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=600&h=1067&auto=format&fit=crop",
+      url: "https://instagram.com"
+    },
+    {
+      id: 4,
+      image: "https://images.unsplash.com/photo-1515542706656-8e6ef17a1521?q=80&w=600&h=1067&auto=format&fit=crop",
+      url: "https://instagram.com"
+    }
+  ];
+
+  return (
+    <section id="gallery" className="py-24 bg-surface-container-lowest">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex flex-col items-center text-center mb-16 gap-4">
+          <h2 className="text-4xl font-bold tracking-tighter text-on-surface mb-2 flex items-center gap-3">
+            <Instagram size={36} className="text-primary" /> Galeri Instagram
+          </h2>
+          <div className="h-1 w-20 bg-primary"></div>
+          <p className="text-on-surface-variant max-w-2xl mt-4">
+            Cuplikan momen dan keseruan aktivitas pelatihan, pembelajaran, serta eksplorasi teknologi terbaru.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
+          {posts.map((post, index) => (
+            <motion.a 
+              key={post.id}
+              href={post.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: index * 0.1 }}
+              className="relative aspect-[9/16] overflow-hidden rounded-2xl group cursor-pointer bg-surface-container shadow-sm hover:shadow-xl transition-shadow"
+            >
+              <img 
+                src={post.image} 
+                alt="Instagram Post" 
+                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+            </motion.a>
+          ))}
+        </div>
+        
+        <div className="mt-12 text-center">
+          <a href="https://instagram.com/alimkautama" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-surface text-on-surface hover:bg-surface-container-high border border-outline-variant/30 transition-colors px-6 py-3 rounded-xl font-bold text-sm tracking-wide">
+            Ikuti di Instagram <ExternalLink size={16} />
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const Contact = () => {
   return (
     <section id="contact" className="py-24 bg-primary text-on-primary">
@@ -676,6 +747,7 @@ export default function App() {
         <Skillset />
         <Awards />
         <Projects />
+        <InstagramGallery />
         <Contact />
       </main>
       <Footer />
