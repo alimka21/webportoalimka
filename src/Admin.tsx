@@ -11,6 +11,9 @@ import { useHomepageSettings, HomepageSettings } from './hooks/useSettings';
 
 import { Footer } from './components/Footer';
 
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+
 interface Project {
   id: string;
   title: string;
@@ -781,16 +784,25 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Deskripsi Singkat</label>
-                <div className="relative">
-                  <FileText size={16} className="absolute left-3 top-3 text-on-surface-variant/50" />
-                  <textarea 
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Deskripsi Proyek</label>
+                <div className="bg-surface-container rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 admin-quill">
+                  <ReactQuill 
+                    theme="snow"
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    required
-                    rows={3}
-                    className="w-full bg-surface-container pl-10 pr-4 py-2.5 rounded-xl text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                    placeholder="Deskripsi singkat tentang proyek ini..."
+                    onChange={setDescription}
+                    modules={{
+                      toolbar: [
+                        [{ 'header': [3, false] }],
+                        ['bold', 'italic', 'underline'],
+                        ['clean']
+                      ],
+                    }}
+                    formats={[
+                      'header',
+                      'bold', 'italic', 'underline'
+                    ]}
+                    className="bg-surface-container text-on-surface"
+                    placeholder="Deskripsikan fitur dan detail proyek ini..."
                   />
                 </div>
               </div>

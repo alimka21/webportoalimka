@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Search, ArrowRight, Star } from "lucide-react";
+import { Search, ArrowRight, Star, Share2 } from "lucide-react";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { parseImageUrl } from './lib/utils';
+import Swal from 'sweetalert2';
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { Link, useSearchParams } from "react-router-dom";
@@ -99,9 +100,11 @@ export default function ProjectsPage() {
              <p className="text-on-surface-variant font-medium text-lg">Tidak ada proyek yang sesuai dengan pencarian Anda.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredProjects.map((project, index) => {
               const isPaid = project.type === 'paid';
+              const plainDesc = (project.description || '').replace(/<[^>]+>/g, '').replace(/&[a-zA-Z0-9#]+;/g, ' ').trim();
+              const truncatedDesc = plainDesc.length > 100 ? plainDesc.substring(0, 100) + '...' : plainDesc;
               return (
                 <motion.div 
                   layout
@@ -112,14 +115,14 @@ export default function ProjectsPage() {
                   transition={{ duration: 0.4, delay: (index % 10) * 0.05 }}
                   className={`rounded-2xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl bg-surface-container-lowest border border-outline-variant/10`}
                 >
-                  <div className="aspect-video overflow-hidden relative z-10 bg-surface-container">
+                  <div className="aspect-square overflow-hidden relative z-10 bg-surface-container">
                     <img 
                       src={project.imageUrl} 
                       alt={project.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
+                        (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/400/400';
                       }}
                     />
                     {isPaid && (
@@ -132,11 +135,33 @@ export default function ProjectsPage() {
                     <h4 className={`text-xl font-bold mb-3 line-clamp-2 transition-colors ${
                       isPaid ? 'text-primary' : 'text-on-surface group-hover:text-primary'
                     }`}>{project.title}</h4>
-                    <p className="text-on-surface-variant text-sm mb-4 flex-grow leading-relaxed">{project.description}</p>
+                    <p className="text-on-surface-variant text-sm mb-4 flex-grow leading-relaxed">
+                       {truncatedDesc}
+                    </p>
                   </div>
                   <Link to={`/projects/${project.id}`} className="absolute inset-0 z-20">
                     <span className="sr-only">Lihat Detail {project.title}</span>
                   </Link>
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const url = window.location.origin + `/projects/${project.id}`;
+                      navigator.clipboard.writeText(url);
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Tautan disalin!',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                      });
+                    }}
+                    className="absolute bottom-6 right-6 z-30 p-2.5 bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary rounded-full transition-all duration-300 shadow-sm opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
+                    title="Bagikan Proyek"
+                  >
+                    <Share2 size={18} />
+                  </button>
                 </motion.div>
               );
             })}

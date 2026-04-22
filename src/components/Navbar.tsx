@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Menu, X, ArrowLeft } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 
 export const Navbar = ({ showBack = false }: { showBack?: boolean }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -20,11 +20,11 @@ export const Navbar = ({ showBack = false }: { showBack?: boolean }) => {
   }, []);
 
   const navLinks = [
-    { name: "Beranda", href: isHome ? "#home" : "/#home" },
+    { name: "Beranda", href: isHome ? "#home" : "/" },
     { name: "Tentang", href: isHome ? "#about" : "/#about" },
     { name: "Kualifikasi", href: isHome ? "#qualifications" : "/#qualifications" },
     { name: "Keahlian", href: isHome ? "#skillset" : "/#skillset" },
-    { name: "Proyek", href: isHome ? "#projects" : "/#projects" },
+    { name: "Proyek", href: isHome ? "#projects" : "/projects" },
     { name: "Kontak", href: isHome ? "#contact" : "/#contact" },
   ];
 
@@ -41,21 +41,31 @@ export const Navbar = ({ showBack = false }: { showBack?: boolean }) => {
               <ArrowLeft size={20} />
             </button>
           )}
-          <a href={isHome ? "#" : "/"} className="text-xl font-bold tracking-tighter text-on-surface">
+          <Link to="/" className="text-xl font-bold tracking-tighter text-on-surface">
             Muhammad Alimka
-          </a>
+          </Link>
         </div>
         
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-8 font-headline font-semibold text-sm">
           {navLinks.map((link) => (
-            <a 
-              key={link.name}
-              href={link.href} 
-              className="text-on-surface-variant hover:text-primary transition-colors"
-            >
-              {link.name}
-            </a>
+            link.href.startsWith('#') ? (
+              <a 
+                key={link.name}
+                href={link.href} 
+                className="text-on-surface-variant hover:text-primary transition-colors"
+              >
+                {link.name}
+              </a>
+            ) : (
+              <Link 
+                key={link.name}
+                to={link.href} 
+                className="text-on-surface-variant hover:text-primary transition-colors"
+              >
+                {link.name}
+              </Link>
+            )
           ))}
         </div>
 
@@ -76,14 +86,25 @@ export const Navbar = ({ showBack = false }: { showBack?: boolean }) => {
           className="md:hidden absolute top-full left-0 w-full bg-surface-container-lowest shadow-lg border-t border-outline-variant/10 py-6 px-6 flex flex-col gap-4"
         >
           {navLinks.map((link) => (
-            <a 
-              key={link.name}
-              href={link.href} 
-              className="text-on-surface-variant font-semibold"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {link.name}
-            </a>
+            link.href.startsWith('#') ? (
+              <a 
+                key={link.name}
+                href={link.href} 
+                className="text-on-surface-variant font-semibold"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {link.name}
+              </a>
+            ) : (
+              <Link 
+                key={link.name}
+                to={link.href} 
+                className="text-on-surface-variant font-semibold"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {link.name}
+              </Link>
+            )
           ))}
         </motion.div>
       )}

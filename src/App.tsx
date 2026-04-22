@@ -17,13 +17,15 @@ import {
   Youtube,
   Menu,
   X,
-  Star
+  Star,
+  Share2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { supabase } from './lib/supabase';
 import { parseImageUrl } from './lib/utils';
+import Swal from 'sweetalert2';
 
 import { Navbar } from "./components/Navbar";
 import { Footer, TikTokIcon } from "./components/Footer";
@@ -494,6 +496,8 @@ import { Link } from "react-router-dom";
 
 const ProjectCard = ({ project, index }: { project: any, index: number, key?: string | number }) => {
   const isPaid = project.type === 'paid';
+  const plainDesc = (project.description || '').replace(/<[^>]+>/g, '').replace(/&[a-zA-Z0-9#]+;/g, ' ').trim();
+  const truncatedDesc = plainDesc.length > 100 ? plainDesc.substring(0, 100) + '...' : plainDesc;
   return (
     <motion.div 
       layout
@@ -503,14 +507,14 @@ const ProjectCard = ({ project, index }: { project: any, index: number, key?: st
       transition={{ duration: 0.4, delay: index * 0.1 }}
       className={`rounded-2xl overflow-hidden card-hover group flex flex-col relative shadow-sm hover:shadow-xl bg-surface-container-lowest border border-outline-variant/10`}
     >
-      <div className="aspect-video overflow-hidden relative z-10 bg-surface-container">
+      <div className="aspect-square overflow-hidden relative z-10 bg-surface-container">
         <img 
           src={project.imageUrl} 
           alt={project.title} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           referrerPolicy="no-referrer"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/640/360';
+            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/placeholder/400/400';
           }}
         />
         {isPaid && (
@@ -525,12 +529,34 @@ const ProjectCard = ({ project, index }: { project: any, index: number, key?: st
         <h4 className={`text-xl font-bold mb-3 line-clamp-2 mt-2 transition-colors ${
           isPaid ? 'text-primary' : 'text-on-surface group-hover:text-primary'
         }`}>{project.title}</h4>
-        <p className="text-on-surface-variant text-sm mb-4 flex-grow leading-relaxed">{project.description}</p>
+        <p className="text-on-surface-variant text-sm mb-4 flex-grow leading-relaxed">
+           {truncatedDesc}
+        </p>
         
       </div>
       <Link to={`/projects/${project.id}`} className="absolute inset-0 z-20">
         <span className="sr-only">Lihat Project {project.title}</span>
       </Link>
+      <button 
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const url = window.location.origin + `/projects/${project.id}`;
+          navigator.clipboard.writeText(url);
+          Swal.fire({
+            icon: 'success',
+            title: 'Tautan disalin!',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+          });
+        }}
+        className="absolute bottom-6 right-6 z-30 p-2.5 bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary rounded-full transition-all duration-300 shadow-sm opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
+        title="Bagikan Proyek"
+      >
+        <Share2 size={18} />
+      </button>
     </motion.div>
   );
 };
@@ -561,7 +587,7 @@ const Projects = () => {
     return () => unsubscribe();
   }, []);
 
-  const featuredProjects = projects.filter(p => p.isFeatured).slice(0, 6);
+  const featuredProjects = projects.slice(0, 6);
 
   return (
     <section id="projects" className="py-24 bg-surface">
@@ -583,7 +609,7 @@ const Projects = () => {
             <p className="text-on-surface-variant font-medium text-lg">Belum ada proyek yang ditampilkan.</p>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {featuredProjects.map((project, index) => (
               <ProjectCard key={project.id} project={project} index={index} />
             ))}
