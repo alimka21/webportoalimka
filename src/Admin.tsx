@@ -40,10 +40,34 @@ const CustomizePanel = () => {
     if (!localSettings) return;
     setIsSaving(true);
     try {
-      await setDoc(doc(db, 'settings', 'homepage'), localSettings);
+      // Create a clean copy to prevent Firestore "undefined" value errors
+      const dataToSave = { ...localSettings };
+
+      // Ensure arrays do not have empty holes/undefined
+      if (dataToSave.awardImages) {
+        const cleanedAwardImages = [];
+        for (let i = 0; i < 4; i++) {
+          cleanedAwardImages.push(dataToSave.awardImages[i] || '');
+        }
+        dataToSave.awardImages = cleanedAwardImages;
+      }
+
+      if (dataToSave.instagramPosts) {
+        const cleanedIg = [];
+        for (let i = 0; i < 4; i++) {
+          cleanedIg.push(dataToSave.instagramPosts[i] || { id: i+1, url: 'https://www.instagram.com/muh.alimka/', image: '' });
+        }
+        dataToSave.instagramPosts = cleanedIg;
+      }
+
+      // Completely remove any potentially floating undefined values across the object
+      const sanitizedData = JSON.parse(JSON.stringify(dataToSave));
+
+      await setDoc(doc(db, 'settings', 'homepage'), sanitizedData);
       Swal.fire('Berhasil!', 'Pengaturan halaman utama disimpan.', 'success');
-    } catch {
-      Swal.fire('Gagal!', 'Terjadi kesalahan.', 'error');
+    } catch (err: any) {
+      console.error('Save settings error:', err);
+      Swal.fire('Gagal!', `Terjadi kesalahan saat menyimpan data: ${err.message || 'Cek console'}`, 'error');
     }
     setIsSaving(false);
   };
