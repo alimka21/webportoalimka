@@ -19,7 +19,7 @@ export interface HomepageSettings {
   experience: { year: string; title: string; institution: string }[];
   awards: { title: string; subtitle: string; highlight: boolean }[];
   awardImages: string[];
-  instagramPosts?: { url: string; image: string }[];
+  galleryImages?: string[];
   cloudinaryCloudName?: string;
   cloudinaryUploadPreset?: string;
 }
@@ -62,11 +62,15 @@ export const defaultSettings: HomepageSettings = {
     "https://lh3.googleusercontent.com/d/1dmpq9L-IVNWE8hpu2Nos4nQwWYs0htvq",
     "https://lh3.googleusercontent.com/d/14Uw1bpKJtk1W__VbcJeYBk6xMucExZbF"
   ],
-  instagramPosts: [
-    { url: "https://instagram.com", image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=600&h=1067&auto=format&fit=crop" },
-    { url: "https://instagram.com", image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=600&h=1067&auto=format&fit=crop" },
-    { url: "https://instagram.com", image: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=600&h=1067&auto=format&fit=crop" },
-    { url: "https://instagram.com", image: "https://images.unsplash.com/photo-1515542706656-8e6ef17a1521?q=80&w=600&h=1067&auto=format&fit=crop" }
+  galleryImages: [
+    "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800&h=1067&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=800&h=1067&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=800&h=1067&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1515542706656-8e6ef17a1521?q=80&w=800&h=1067&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1588072432836-e10032774350?q=80&w=800&h=1067&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=800&h=1067&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=800&h=1067&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1513258496099-48168024aec0?q=80&w=800&h=1067&auto=format&fit=crop"
   ]
 };
 

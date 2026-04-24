@@ -34,10 +34,8 @@ import { Footer, TikTokIcon } from "./components/Footer";
 import { useHomepageSettings } from './hooks/useSettings';
 
 const Hero = () => {
-  const { settings, loading } = useHomepageSettings();
+  const { settings } = useHomepageSettings();
   
-  if (loading) return null;
-
   return (
     <section id="home" className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -100,8 +98,7 @@ const About = () => {
     { icon: <Youtube size={18} />, href: "https://www.youtube.com/@gurualimka9743", label: "YouTube", color: "hover:bg-[#FF0000]" },
   ];
 
-  const { settings, loading } = useHomepageSettings();
-  if (loading) return null;
+  const { settings } = useHomepageSettings();
 
   return (
     <section id="about" className="py-20 bg-surface">
@@ -216,8 +213,7 @@ const About = () => {
 };
 
 const Qualifications = () => {
-  const { settings, loading } = useHomepageSettings();
-  if (loading) return null;
+  const { settings } = useHomepageSettings();
 
   const education = settings.education || [];
   const experience = settings.experience || [];
@@ -395,8 +391,7 @@ const Skillset = () => {
 };
 
 const Awards = () => {
-  const { settings, loading } = useHomepageSettings();
-  if (loading) return null;
+  const { settings } = useHomepageSettings();
 
   const awards = settings.awards || [];
   const awardImages = settings.awardImages || [];
@@ -494,11 +489,14 @@ const Awards = () => {
 };
 
 import { Link } from "react-router-dom";
+import { generateSlug } from "./lib/utils";
 
 const ProjectCard = ({ project, index }: { project: any, index: number, key?: string | number }) => {
   const isPaid = project.type === 'paid';
   const plainDesc = (project.description || '').replace(/<[^>]+>/g, '').replace(/&[a-zA-Z0-9#]+;/g, ' ').trim();
   const truncatedDesc = plainDesc.length > 100 ? plainDesc.substring(0, 100) + '...' : plainDesc;
+  const projectUrl = `/projects/${generateSlug(project.title, project.id)}`;
+
   return (
     <motion.div 
       layout
@@ -535,14 +533,14 @@ const ProjectCard = ({ project, index }: { project: any, index: number, key?: st
         </p>
         
       </div>
-      <Link to={`/projects/${project.id}`} className="absolute inset-0 z-20">
+      <Link to={projectUrl} className="absolute inset-0 z-20">
         <span className="sr-only">Lihat Project {project.title}</span>
       </Link>
       <button 
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          const url = window.location.origin + `/projects/${project.id}`;
+          const url = window.location.origin + projectUrl;
           navigator.clipboard.writeText(url);
           Swal.fire({
             icon: 'success',
@@ -629,20 +627,19 @@ const Projects = () => {
   );
 };
 
-const InstagramGallery = () => {
-  const { settings, loading } = useHomepageSettings();
+const Gallery = () => {
+  const { settings } = useHomepageSettings();
   
-  if (loading) return null;
-  const posts = settings.instagramPosts || [];
+  const images = settings.galleryImages || [];
 
-  if (posts.length === 0) return null;
+  if (images.length === 0) return null;
 
   return (
     <section id="gallery" className="py-24 bg-surface-container-lowest">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex flex-col items-center text-center mb-16 gap-4">
           <h2 className="text-4xl font-bold tracking-tighter text-on-surface mb-2 flex items-center gap-3">
-            <Instagram size={36} className="text-primary" /> Galeri Instagram
+            Galeri Foto
           </h2>
           <div className="h-1 w-20 bg-primary"></div>
           <p className="text-on-surface-variant max-w-2xl mt-4">
@@ -650,58 +647,29 @@ const InstagramGallery = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
-          {posts.map((post, index) => {
-            const getEmbedUrl = (url: string) => {
-              if (!url || typeof url !== 'string') return '';
-              try {
-                const parsed = new URL(url);
-                if (!parsed.hostname.includes('instagram.com')) return '';
-                let path = parsed.pathname.replace(/\/+$/, '');
-                if (!path.endsWith('/embed')) {
-                   return `${parsed.origin}${path}/embed`;
-                }
-                return url;
-              } catch {
-                return '';
-              }
-            };
-            const embedUrl = getEmbedUrl(post.url);
-            
-            if (!embedUrl) return null;
+        <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4 max-w-7xl mx-auto">
+          {images.map((image, index) => {
+            if (!image) return null;
 
             return (
               <motion.div 
                 key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
-                className="relative overflow-hidden rounded-2xl bg-surface-container shadow-sm hover:shadow-xl transition-shadow w-full h-[450px]"
+                transition={{ duration: 0.4, delay: (index % 4) * 0.1 }}
+                className="relative overflow-hidden rounded-2xl bg-surface-container shadow-sm group break-inside-avoid"
               >
-                <iframe 
-                  src={embedUrl}
-                  className="w-full h-full border-0 pointer-events-auto"
-                  scrolling="no"
-                  allowtransparency="true"
-                ></iframe>
-                {/* Invisible overlay for clickable area to open native Instagram optionally */}
-                <a 
-                   href={post.url} 
-                   target="_blank" 
-                   rel="noopener noreferrer" 
-                   className="absolute inset-0 z-10 pointer-events-none"
-                   aria-label="View on Instagram"
-                ></a>
+                <img 
+                  src={parseImageUrl(image)} 
+                  alt={`Galeri ${index + 1}`} 
+                  className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
               </motion.div>
             );
           })}
-        </div>
-        
-        <div className="mt-12 text-center">
-          <a href="https://www.instagram.com/muh.alimka/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-surface text-on-surface hover:bg-surface-container-high border border-outline-variant/30 transition-colors px-6 py-3 rounded-xl font-bold text-sm tracking-wide">
-            Ikuti di Instagram <ExternalLink size={16} />
-          </a>
         </div>
       </div>
     </section>
@@ -756,7 +724,7 @@ export default function App() {
         <Skillset />
         <Awards />
         <Projects />
-        <InstagramGallery />
+        <Gallery />
         <Contact />
       </main>
       <Footer />

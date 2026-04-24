@@ -52,12 +52,17 @@ const CustomizePanel = () => {
         dataToSave.awardImages = cleanedAwardImages;
       }
 
-      if (dataToSave.instagramPosts) {
-        const cleanedIg = [];
-        for (let i = 0; i < 4; i++) {
-          cleanedIg.push(dataToSave.instagramPosts[i] || { id: i+1, url: 'https://www.instagram.com/muh.alimka/', image: '' });
+      if (dataToSave.galleryImages) {
+        const cleanedGallery = [];
+        for (let i = 0; i < 8; i++) {
+          cleanedGallery.push(dataToSave.galleryImages[i] || '');
         }
-        dataToSave.instagramPosts = cleanedIg;
+        dataToSave.galleryImages = cleanedGallery;
+      }
+      
+      // Clean up old instagram config if exists (just to keep DB clean)
+      if (dataToSave.instagramPosts) {
+        delete dataToSave.instagramPosts;
       }
 
       // Completely remove any potentially floating undefined values across the object
@@ -84,6 +89,11 @@ const CustomizePanel = () => {
          const newImages = [...(localSettings?.awardImages || [])];
          newImages[idx] = url;
          setLocalSettings(prev => prev ? ({ ...prev, awardImages: newImages }) : prev);
+      } else if (key.startsWith('galleryImage-')) {
+         const idx = parseInt(key.split('-')[1]);
+         const newGallery = [...(localSettings?.galleryImages || [])];
+         newGallery[idx] = url;
+         setLocalSettings(prev => prev ? ({ ...prev, galleryImages: newGallery }) : prev);
       } else {
          setLocalSettings(prev => prev ? ({ ...prev, [key]: url }) : prev);
       }
@@ -326,51 +336,26 @@ const CustomizePanel = () => {
           </div>
         </div>
 
-        {/* INSTAGRAM GALLERY SECTION */}
+        {/* GALLERY SECTION */}
         <div>
-          <h3 className="text-sm font-black text-primary uppercase tracking-widest border-b border-outline-variant/10 pb-2 mb-4">Galeri Instagram (Beranda)</h3>
-          <p className="text-xs text-on-surface-variant mb-4">Masukkan tautan postingan Instagram aslinya untuk menampilkan galeri instagram (4-kolom) di beranda.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[0, 1, 2, 3].map((idx) => {
-               const post = localSettings.instagramPosts?.[idx] || { id: idx+1, url: 'https://instagram.com', image: '' };
-               const getEmbedUrl = (url: string) => {
-                 if (!url || typeof url !== 'string') return '';
-                 try {
-                   const parsed = new URL(url);
-                   if (!parsed.hostname.includes('instagram.com')) return '';
-                   let path = parsed.pathname.replace(/\/+$/, '');
-                   if (!path.endsWith('/embed')) {
-                      return `${parsed.origin}${path}/embed`;
-                   }
-                   return url;
-                 } catch { return ''; }
-               };
-               const embedUrl = getEmbedUrl(post.url);
+          <h3 className="text-sm font-black text-primary uppercase tracking-widest border-b border-outline-variant/10 pb-2 mb-4">Galeri Foto Beranda (Maks 8 Foto)</h3>
+          <p className="text-xs text-on-surface-variant mb-4">Upload hingga 8 foto terbaik Anda untuk ditampilkan di bagian Galeri.</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((idx) => {
+               const imgSrc = localSettings.galleryImages?.[idx];
 
                return (
-                  <div key={idx} className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 flex flex-col gap-3">
-                     <div className="relative overflow-hidden border border-outline-variant/30 rounded-xl bg-surface h-[300px]">
-                        {embedUrl ? (
-                           <iframe src={embedUrl} className="w-[125%] h-[125%] origin-top-left scale-[0.8] border-0 pointer-events-none" scrolling="no"></iframe>
-                        ) : (
-                           <div className="flex items-center justify-center h-full w-full bg-surface text-center p-2 text-on-surface-variant opacity-50"><span className="text-[10px] font-bold uppercase">No Preview</span></div>
-                        )}
-                     </div>
-                     <div>
-                        <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">🔗 Link Postingan Reel/Post</label>
-                        <input 
-                           type="url" 
-                           value={post.url} 
-                           onChange={e => {
-                             const newPosts = [...(localSettings.instagramPosts || [])];
-                             if(!newPosts[idx]) newPosts[idx] = { id: idx+1, url: 'https://www.instagram.com/p/', image: '' };
-                             newPosts[idx].url = e.target.value;
-                             setLocalSettings({ ...localSettings, instagramPosts: newPosts });
-                           }} 
-                           className="w-full bg-surface-container px-3 py-2 rounded-lg text-xs" 
-                           placeholder="https://www.instagram.com/p/..." 
-                        />
-                     </div>
+                  <div key={idx} className="relative aspect-[3/4] border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center bg-surface hover:bg-surface-container-low transition-colors overflow-hidden group">
+                     {imgSrc ? (
+                        <img src={parseImageUrl(imgSrc)} className="w-full h-full object-cover" />
+                     ) : (
+                        <div className="text-center p-2 text-on-surface-variant opacity-50"><ImageIcon size={24} className="mx-auto mb-1" /><span className="text-[10px] font-bold uppercase">Foto {idx + 1}</span></div>
+                     )}
+                     
+                     <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white font-bold text-xs backdrop-blur-sm">
+                        {uploadProgress[`galleryImage-${idx}`] ? <Loader2 size={16} className="animate-spin" /> : (imgSrc ? 'Ganti Foto' : '+ Upload')}
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUploadLocal(e, `galleryImage-${idx}`)} disabled={uploadProgress[`galleryImage-${idx}`]} />
+                     </label>
                   </div>
                )
             })}

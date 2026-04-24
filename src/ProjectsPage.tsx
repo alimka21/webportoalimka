@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Search, ArrowRight, Star, Share2 } from "lucide-react";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
-import { parseImageUrl } from './lib/utils';
+import { parseImageUrl, generateSlug } from './lib/utils';
 import Swal from 'sweetalert2';
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
@@ -105,6 +105,7 @@ export default function ProjectsPage() {
               const isPaid = project.type === 'paid';
               const plainDesc = (project.description || '').replace(/<[^>]+>/g, '').replace(/&[a-zA-Z0-9#]+;/g, ' ').trim();
               const truncatedDesc = plainDesc.length > 100 ? plainDesc.substring(0, 100) + '...' : plainDesc;
+              const projectUrl = `/projects/${generateSlug(project.title, project.id)}`;
               return (
                 <motion.div 
                   layout
@@ -139,14 +140,14 @@ export default function ProjectsPage() {
                        {truncatedDesc}
                     </p>
                   </div>
-                  <Link to={`/projects/${project.id}`} className="absolute inset-0 z-20">
+                  <Link to={projectUrl} className="absolute inset-0 z-20">
                     <span className="sr-only">Lihat Detail {project.title}</span>
                   </Link>
                   <button 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      const url = window.location.origin + `/projects/${project.id}`;
+                      const url = window.location.origin + projectUrl;
                       navigator.clipboard.writeText(url);
                       Swal.fire({
                         icon: 'success',

@@ -11,3 +11,21 @@ export function parseImageUrl(url: string): string {
   
   return url;
 }
+
+export function generateSlug(title: string, id: string): string {
+  if (!title) return id;
+  const slug = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  
+  return `${slug}--${id}`;
+}
+
+export function extractIdFromSlug(slugOrId: string): string {
+  if (!slugOrId) return '';
+  const parts = slugOrId.split('--');
+  return parts.length > 1 ? parts[parts.length - 1] : slugOrId;
+}

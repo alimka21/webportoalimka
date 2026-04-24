@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { parseImageUrl } from './lib/utils';
+import { parseImageUrl, extractIdFromSlug } from './lib/utils';
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { ExternalLink, ArrowLeft, Loader2, Copy, Check, ChevronLeft, ChevronRight, Share2 } from "lucide-react";
@@ -22,8 +22,11 @@ export default function ProjectDetail() {
     window.scrollTo(0, 0);
     const fetchProject = async () => {
       if (!id) return;
+      
+      const parsedId = extractIdFromSlug(id);
+      
       try {
-        const docRef = doc(db, 'projects', id);
+        const docRef = doc(db, 'projects', parsedId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const fbData = docSnap.data();
