@@ -30,12 +30,14 @@ export default function ProjectDetail() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const fbData = docSnap.data();
+          const title = fbData.title || 'Proyek';
           setProject({ 
             id: docSnap.id, 
             ...fbData,
             supportUrls: (fbData.supportUrls || []).map((url: string) => parseImageUrl(url)),
             imageUrl: parseImageUrl(fbData.imageUrl)
           });
+          document.title = `${title} | Alimka Digital`;
         } else {
           console.error("No such document in Firebase!");
         }

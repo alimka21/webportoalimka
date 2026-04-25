@@ -714,6 +714,10 @@ const Contact = () => {
 };
 
 export default function App() {
+  useEffect(() => {
+    document.title = "Alimka Digital: Solusi AI & Alat Bantu Praktis untuk Guru Indonesia";
+  }, []);
+
   return (
     <div className="min-h-screen selection:bg-primary-fixed selection:text-on-primary-fixed">
       <Navbar />

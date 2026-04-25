@@ -394,6 +394,10 @@ const CustomizePanel = () => {
 
 export default function Admin() {
   const [user, setUser] = useState<User | null>(null);
+  
+  useEffect(() => {
+    document.title = "Admin Panel | Alimka Digital";
+  }, []);
   const [isAdmin, setIsAdmin] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);

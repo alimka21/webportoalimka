@@ -19,6 +19,7 @@ export default function ProjectsPage() {
   useEffect(() => {
     // Scroll to top on mount
     window.scrollTo(0, 0);
+    document.title = "Koleksi Proyek | Alimka Digital";
     
     const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
